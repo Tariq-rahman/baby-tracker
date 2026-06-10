@@ -2,6 +2,8 @@ import { useState } from 'react'
 import type { WeightEvent } from '../../db/schema'
 import { kgToGrams, lbOzToGrams, gramsToKg } from '../../lib/units'
 import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
+import { eventColor, palette } from '../../lib/theme'
+import { DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
 
 interface Props {
   initial?: WeightEvent
@@ -9,6 +11,9 @@ interface Props {
   onDelete?: () => void
   onClose: () => void
 }
+
+const col = eventColor.weight
+const field = 'mt-1 w-full rounded-2xl border border-faint bg-surface p-3 text-lg text-ink'
 
 export default function WeightSheet({ initial, onSave, onDelete, onClose }: Props) {
   const [mode, setMode] = useState<'metric' | 'imperial'>('metric')
@@ -29,83 +34,70 @@ export default function WeightSheet({ initial, onSave, onDelete, onClose }: Prop
     onClose()
   }
 
+  function toggle(m: 'metric' | 'imperial') {
+    return {
+      className: 'press flex-1 rounded-2xl py-2.5 font-bold',
+      style:
+        mode === m
+          ? { background: col, color: '#fff' }
+          : { background: palette.surface, color: palette.inkSoft, border: `1.6px solid ${palette.faint}` },
+    }
+  }
+
   return (
-    <div className="space-y-4 p-4">
-      <h2 className="text-lg font-bold">Weight</h2>
-      <div className="flex gap-2">
-        <button
-          type="button"
-          onClick={() => setMode('metric')}
-          className={`flex-1 rounded border p-2 ${mode === 'metric' ? 'bg-blue-600 text-white' : 'bg-white'}`}
-        >
+    <div className="px-5 pb-7 pt-3.5">
+      <DragHandle />
+      <SheetHeader type="weight" title={initial ? 'Edit weight' : 'Log weight'} onClose={onClose} />
+
+      <div className="mb-4 flex gap-2">
+        <button type="button" {...toggle('metric')} onClick={() => setMode('metric')}>
           kg
         </button>
-        <button
-          type="button"
-          onClick={() => setMode('imperial')}
-          className={`flex-1 rounded border p-2 ${mode === 'imperial' ? 'bg-blue-600 text-white' : 'bg-white'}`}
-        >
+        <button type="button" {...toggle('imperial')} onClick={() => setMode('imperial')}>
           lb + oz
         </button>
       </div>
+
       {mode === 'metric' ? (
-        <label className="block">
-          <span className="text-sm text-slate-600">kg</span>
+        <label className="mb-4 block">
+          <span className="text-sm text-inkSoft">kg</span>
           <input
             type="number"
             step="0.001"
             inputMode="decimal"
             value={kg}
             onChange={(e) => setKg(e.target.value)}
-            className="mt-1 w-full rounded border p-3 text-lg"
+            className={field}
           />
         </label>
       ) : (
-        <div className="flex gap-2">
+        <div className="mb-4 flex gap-2">
           <label className="block flex-1">
-            <span className="text-sm text-slate-600">lb</span>
+            <span className="text-sm text-inkSoft">lb</span>
             <input
               type="number"
               inputMode="numeric"
               value={lb}
               onChange={(e) => setLb(e.target.value)}
-              className="mt-1 w-full rounded border p-3 text-lg"
+              className={field}
             />
           </label>
           <label className="block flex-1">
-            <span className="text-sm text-slate-600">oz</span>
+            <span className="text-sm text-inkSoft">oz</span>
             <input
               type="number"
               inputMode="numeric"
               value={oz}
               onChange={(e) => setOz(e.target.value)}
-              className="mt-1 w-full rounded border p-3 text-lg"
+              className={field}
             />
           </label>
         </div>
       )}
-      <label className="block">
-        <span className="text-sm text-slate-600">Time</span>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className="mt-1 w-full rounded border p-3"
-        />
-      </label>
-      <div className="flex gap-2">
-        <button onClick={onClose} className="flex-1 rounded border p-3">
-          Cancel
-        </button>
-        <button onClick={handleSave} className="flex-1 rounded bg-blue-600 p-3 font-bold text-white">
-          Save
-        </button>
-      </div>
-      {initial && onDelete && (
-        <button onClick={onDelete} className="w-full rounded border border-red-500 p-3 font-semibold text-red-600">
-          Delete
-        </button>
-      )}
+
+      <TimeField value={when} onChange={setWhen} />
+      <SaveButton color={col} label="weight" onClick={handleSave} />
+      {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>
   )
 }

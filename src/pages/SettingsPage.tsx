@@ -1,17 +1,22 @@
 import { useState } from 'react'
 import { useBaby } from '../hooks/useBaby'
 import { useMedications } from '../hooks/useEvents'
-import {
-  saveBaby,
-  addMedication,
-  deleteMedication,
-  exportAll,
-  importAll,
-} from '../db/storage'
+import { saveBaby, addMedication, deleteMedication, exportAll, importAll } from '../db/storage'
 import { serializeBackup, parseBackup } from '../lib/backup'
+import { eventColor, palette } from '../lib/theme'
 import type { MedicationUnit } from '../db/schema'
 
 const UNITS: MedicationUnit[] = ['ml', 'mg', 'IU', 'drops']
+const field = 'w-full rounded-2xl border border-faint bg-cream p-3 text-ink placeholder:text-inkSoft'
+
+function Card({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <section className="rounded-3xl bg-surface p-4 shadow-md">
+      <h2 className="mb-3 text-lg font-bold text-ink">{title}</h2>
+      {children}
+    </section>
+  )
+}
 
 export default function SettingsPage() {
   const baby = useBaby()
@@ -24,44 +29,42 @@ export default function SettingsPage() {
   const [medUnit, setMedUnit] = useState<MedicationUnit>('IU')
 
   return (
-    <div className="space-y-8 p-4">
-      <section>
-        <h2 className="mb-2 text-lg font-bold">Baby</h2>
-        <p className="mb-2 text-sm text-slate-500">
+    <div className="space-y-5 px-5 pt-3">
+      <h1 className="text-xl font-bold text-ink">Settings</h1>
+
+      <Card title="Baby">
+        <p className="mb-3 text-sm text-inkSoft">
           Current: {baby ? `${baby.name} (born ${baby.dateOfBirth})` : 'not set'}
         </p>
         <input
           placeholder="Name"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="mb-2 w-full rounded border p-3"
+          className={`${field} mb-2`}
         />
         <input
           type="date"
           value={dob}
           onChange={(e) => setDob(e.target.value)}
-          className="mb-2 w-full rounded border p-3"
+          className={`${field} mb-3`}
         />
         <button
           onClick={() => name && dob && saveBaby({ name, dateOfBirth: dob })}
-          className="w-full rounded bg-blue-600 p-3 font-bold text-white"
+          className="press w-full rounded-2xl py-3 font-bold text-white"
+          style={{ background: palette.ring }}
         >
           Save baby
         </button>
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="mb-2 text-lg font-bold">Medications</h2>
-        <ul className="mb-3 divide-y">
+      <Card title="Medications">
+        <ul className="mb-3 divide-y divide-faint">
           {medications.map((m) => (
-            <li key={m.id} className="flex items-center justify-between py-2">
-              <span>
+            <li key={m.id} className="flex items-center justify-between py-2.5">
+              <span className="text-ink">
                 {m.name} — {m.defaultDose} {m.unit}
               </span>
-              <button
-                onClick={() => m.id && deleteMedication(m.id)}
-                className="text-sm text-red-600"
-              >
+              <button onClick={() => m.id && deleteMedication(m.id)} className="text-sm font-semibold text-red-600">
                 Delete
               </button>
             </li>
@@ -71,20 +74,20 @@ export default function SettingsPage() {
           placeholder="Name (e.g. Vitamin D)"
           value={medName}
           onChange={(e) => setMedName(e.target.value)}
-          className="mb-2 w-full rounded border p-3"
+          className={`${field} mb-2`}
         />
-        <div className="mb-2 flex gap-2">
+        <div className="mb-3 flex gap-2">
           <input
             type="number"
             placeholder="Default dose"
             value={medDose}
             onChange={(e) => setMedDose(e.target.value)}
-            className="flex-1 rounded border p-3"
+            className={`${field} flex-1`}
           />
           <select
             value={medUnit}
             onChange={(e) => setMedUnit(e.target.value as MedicationUnit)}
-            className="rounded border p-3"
+            className="rounded-2xl border border-faint bg-cream p-3 text-ink"
           >
             {UNITS.map((u) => (
               <option key={u} value={u}>
@@ -100,14 +103,14 @@ export default function SettingsPage() {
             setMedName('')
             setMedDose('')
           }}
-          className="w-full rounded bg-emerald-600 p-3 font-bold text-white"
+          className="press w-full rounded-2xl py-3 font-bold text-white"
+          style={{ background: eventColor.dose }}
         >
           Add medication
         </button>
-      </section>
+      </Card>
 
-      <section>
-        <h2 className="mb-2 text-lg font-bold">Backup</h2>
+      <Card title="Backup">
         <button
           onClick={async () => {
             const data = await exportAll()
@@ -120,11 +123,12 @@ export default function SettingsPage() {
             a.click()
             URL.revokeObjectURL(url)
           }}
-          className="mb-3 w-full rounded bg-slate-700 p-3 font-bold text-white"
+          className="press mb-3 w-full rounded-2xl py-3 font-bold text-white"
+          style={{ background: palette.ink }}
         >
           Export JSON
         </button>
-        <label className="block w-full rounded border-2 border-dashed p-3 text-center text-slate-600">
+        <label className="block w-full rounded-2xl border-2 border-dashed border-faint p-3 text-center font-medium text-inkSoft">
           Import JSON
           <input
             type="file"
@@ -145,7 +149,7 @@ export default function SettingsPage() {
             }}
           />
         </label>
-      </section>
+      </Card>
     </div>
   )
 }

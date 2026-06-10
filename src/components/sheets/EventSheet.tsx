@@ -1,4 +1,4 @@
-import type { BabyEvent, Medication } from '../../db/schema'
+import type { BabyEvent, FeedEvent, Medication } from '../../db/schema'
 import { addEvent, updateEvent, deleteEvent } from '../../db/storage'
 import BottleSheet from './BottleSheet'
 import NappySheet from './NappySheet'
@@ -9,10 +9,13 @@ interface Props {
   adding: 'bottle' | 'nappy' | 'dose' | 'weight' | null
   editing: BabyEvent | null
   medications: Medication[]
+  /** Most recent feed — used to prefill a new feed sheet. */
+  lastFeed?: FeedEvent
   onClose: () => void
+  onSaved?: (event: BabyEvent) => void
 }
 
-export default function EventSheet({ adding, editing, medications, onClose }: Props) {
+export default function EventSheet({ adding, editing, medications, lastFeed, onClose, onSaved }: Props) {
   if (!adding && !editing) return null
 
   async function handleSave(event: BabyEvent) {
@@ -20,6 +23,7 @@ export default function EventSheet({ adding, editing, medications, onClose }: Pr
       await updateEvent(editing.id, event)
     } else {
       await addEvent(event)
+      onSaved?.(event)
     }
   }
 
@@ -30,15 +34,20 @@ export default function EventSheet({ adding, editing, medications, onClose }: Pr
     }
   }
 
-  // Decide which sheet to render: the editing event's type wins, else the adding kind.
   const kind = editing ? editing.type : adding
 
   return (
-    <div className="fixed inset-0 z-10 flex items-end bg-black/40" onClick={onClose}>
-      <div className="w-full rounded-t-2xl bg-white" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-20 flex items-end" onClick={onClose}>
+      <div className="scrim-in absolute inset-0" style={{ background: 'rgba(40,28,20,0.4)' }} />
+      <div
+        className="sheet-in relative w-full rounded-t-sheet bg-surface"
+        style={{ boxShadow: '0 -16px 40px #3A2E2726' }}
+        onClick={(e) => e.stopPropagation()}
+      >
         {(kind === 'feed' || kind === 'bottle') && (
           <BottleSheet
             initial={editing?.type === 'feed' ? editing : undefined}
+            lastFeed={editing ? undefined : lastFeed}
             onSave={handleSave}
             onDelete={editing ? handleDelete : undefined}
             onClose={onClose}

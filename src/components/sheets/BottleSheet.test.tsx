@@ -42,6 +42,28 @@ describe('BottleSheet', () => {
     )
   })
 
+  it('prefills volume and content from the last feed when adding a new one', async () => {
+    const onSave = vi.fn()
+    const lastFeed = {
+      id: 3,
+      type: 'feed' as const,
+      volumeMl: 150,
+      content: 'formula' as const,
+      occurredAt: '2026-06-09T08:00:00.000Z',
+      createdAt: '2026-06-09T08:00:00.000Z',
+    }
+    render(<BottleSheet lastFeed={lastFeed} onSave={onSave} onClose={() => {}} />)
+    expect(screen.getByLabelText(/volume/i)).toHaveValue(150)
+    // saving without touching anything reuses the last values as a brand-new event
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ type: 'feed', volumeMl: 150, content: 'formula' }),
+    )
+    // ...but it is a new event, not an edit of the old one (no id, fresh createdAt)
+    expect(onSave.mock.calls[0][0].id).toBeUndefined()
+    expect(onSave.mock.calls[0][0].createdAt).not.toBe('2026-06-09T08:00:00.000Z')
+  })
+
   it('shows a delete button only when editing', async () => {
     const onDelete = vi.fn()
     const initial = {
