@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { DoseEvent, Medication } from '../../db/schema'
 import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
+import { eventColor, palette } from '../../lib/theme'
+import { DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
 
 interface Props {
   medications: Medication[]
@@ -9,6 +11,8 @@ interface Props {
   onDelete?: () => void
   onClose: () => void
 }
+
+const col = eventColor.dose
 
 export default function DoseSheet({ medications, initial, onSave, onDelete, onClose }: Props) {
   const [medId, setMedId] = useState<number | undefined>(initial?.medicationId ?? medications[0]?.id)
@@ -20,10 +24,11 @@ export default function DoseSheet({ medications, initial, onSave, onDelete, onCl
 
   if (medications.length === 0) {
     return (
-      <div className="space-y-4 p-4">
-        <h2 className="text-lg font-bold">Dose</h2>
-        <p className="text-slate-600">No medications yet. Add one in Settings first.</p>
-        <button onClick={onClose} className="w-full rounded border p-3">
+      <div className="px-5 pb-7 pt-3.5">
+        <DragHandle />
+        <SheetHeader type="dose" title="Log meds" onClose={onClose} />
+        <p className="mb-4 text-inkSoft">No medications yet. Add one in Settings first.</p>
+        <button onClick={onClose} className="press w-full rounded-2xl border border-faint py-3 font-semibold text-ink">
           Close
         </button>
       </div>
@@ -45,59 +50,48 @@ export default function DoseSheet({ medications, initial, onSave, onDelete, onCl
   }
 
   return (
-    <div className="space-y-4 p-4">
-      <h2 className="text-lg font-bold">Dose</h2>
-      <label className="block">
-        <span className="text-sm text-slate-600">Medication</span>
-        <select
-          value={medId}
-          onChange={(e) => {
-            const id = Number(e.target.value)
-            setMedId(id)
-            const m = medications.find((x) => x.id === id)
-            setDose(String(m?.defaultDose ?? ''))
-          }}
-          className="mt-1 w-full rounded border p-3"
-        >
-          {medications.map((m) => (
-            <option key={m.id} value={m.id}>
+    <div className="px-5 pb-7 pt-3.5">
+      <DragHandle />
+      <SheetHeader type="dose" title={initial ? 'Edit meds' : 'Log meds'} onClose={onClose} />
+
+      <div className="mb-3 flex flex-wrap gap-2">
+        {medications.map((m) => {
+          const active = medId === m.id
+          return (
+            <button
+              key={m.id}
+              type="button"
+              onClick={() => {
+                setMedId(m.id)
+                setDose(String(m.defaultDose ?? ''))
+              }}
+              className="press rounded-2xl px-3.5 py-2.5 text-sm font-bold"
+              style={
+                active
+                  ? { border: `1.8px solid ${col}`, background: `${col}1f`, color: col }
+                  : { border: `1.6px solid ${palette.faint}`, background: palette.surface, color: palette.inkSoft }
+              }
+            >
               {m.name}
-            </option>
-          ))}
-        </select>
-      </label>
-      <label className="block">
-        <span className="text-sm text-slate-600">Dose ({selected?.unit})</span>
+            </button>
+          )
+        })}
+      </div>
+
+      <label className="mb-4 block">
+        <span className="text-sm text-inkSoft">Dose ({selected?.unit})</span>
         <input
           type="number"
           inputMode="decimal"
           value={dose}
           onChange={(e) => setDose(e.target.value)}
-          className="mt-1 w-full rounded border p-3 text-lg"
+          className="mt-1 w-full rounded-2xl border border-faint bg-surface p-3 text-lg text-ink"
         />
       </label>
-      <label className="block">
-        <span className="text-sm text-slate-600">Time</span>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className="mt-1 w-full rounded border p-3"
-        />
-      </label>
-      <div className="flex gap-2">
-        <button onClick={onClose} className="flex-1 rounded border p-3">
-          Cancel
-        </button>
-        <button onClick={handleSave} className="flex-1 rounded bg-blue-600 p-3 font-bold text-white">
-          Save
-        </button>
-      </div>
-      {initial && onDelete && (
-        <button onClick={onDelete} className="w-full rounded border border-red-500 p-3 font-semibold text-red-600">
-          Delete
-        </button>
-      )}
+
+      <TimeField value={when} onChange={setWhen} />
+      <SaveButton color={col} label="meds" onClick={handleSave} />
+      {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>
   )
 }

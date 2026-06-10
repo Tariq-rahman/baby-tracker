@@ -1,3 +1,114 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  html,
+  body,
+  #root {
+    height: 100%;
+  }
+  body {
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -webkit-tap-highlight-color: transparent;
+    color: theme('colors.ink');
+    /* warm radial ground, echoes the design mockup */
+    background: radial-gradient(
+      1200px 800px at 50% -10%,
+      #efe6da 0%,
+      #e7dccd 55%,
+      #ddd0bd 100%
+    );
+  }
+}
+
+@layer utilities {
+  /* numerals line up on the clock + times */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum' 1;
+  }
+  /* hide scrollbars on the scrollable app body */
+  .no-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+}
+
+@layer components {
+  /* press feedback for any tappable */
+  .press {
+    transition:
+      transform 0.12s cubic-bezier(0.2, 0.7, 0.3, 1),
+      box-shadow 0.15s ease,
+      background 0.15s ease;
+  }
+  .press:active {
+    transform: scale(0.96);
+  }
+}
+
+/* bottom-sheet entrance (plays once on mount) */
+@keyframes scrimIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+.scrim-in {
+  animation: scrimIn 0.26s ease both;
+}
+@keyframes sheetUp {
+  from {
+    transform: translateY(110%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.sheet-in {
+  animation: sheetUp 0.34s cubic-bezier(0.22, 0.9, 0.27, 1) both;
+}
+
+/* clock marker pop-in */
+@keyframes pop {
+  0% {
+    transform: scale(0);
+  }
+  70% {
+    transform: scale(1.12);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+.mpop {
+  animation: pop 0.42s cubic-bezier(0.22, 0.9, 0.27, 1) forwards;
+}
+
+@keyframes toastin {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 12px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+.toast {
+  animation: toastin 0.26s ease both;
+}
+
+/* gentle sweep of the now-hand on load */
+@keyframes sweep {
+  from {
+    transform: rotate(-32deg);
+  }
+  to {
+    transform: rotate(0);
+  }
+}

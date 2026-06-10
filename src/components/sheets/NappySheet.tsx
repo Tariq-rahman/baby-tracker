@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import type { NappyEvent, NappyType, NappySize } from '../../db/schema'
 import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
+import { eventColor } from '../../lib/theme'
+import { Chip, DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
 
 interface Props {
   initial?: NappyEvent
@@ -10,6 +12,7 @@ interface Props {
 }
 
 const needsSize = (t: NappyType) => t === 'dirty' || t === 'both'
+const col = eventColor.nappy
 
 export default function NappySheet({ initial, onSave, onDelete, onClose }: Props) {
   const [nappyType, setNappyType] = useState<NappyType | undefined>(initial?.nappyType)
@@ -30,63 +33,39 @@ export default function NappySheet({ initial, onSave, onDelete, onClose }: Props
   }
 
   return (
-    <div className="space-y-4 p-4">
-      <h2 className="text-lg font-bold">Nappy</h2>
-      <div className="flex gap-2">
+    <div className="px-5 pb-7 pt-3.5">
+      <DragHandle />
+      <SheetHeader type="nappy" title={initial ? 'Edit change' : 'Log change'} onClose={onClose} />
+
+      <div className="mb-4 flex gap-2">
         {(['wet', 'dirty', 'both'] as const).map((t) => (
-          <button
+          <Chip
             key={t}
-            type="button"
+            active={nappyType === t}
+            color={col}
             onClick={() => {
               setNappyType(t)
               if (!needsSize(t)) setSize(undefined)
             }}
-            className={`flex-1 rounded border p-3 capitalize ${
-              nappyType === t ? 'bg-blue-600 text-white' : 'bg-white'
-            }`}
           >
             {t}
-          </button>
+          </Chip>
         ))}
       </div>
+
       {nappyType && needsSize(nappyType) && (
-        <div className="flex gap-2">
+        <div className="mb-4 flex gap-2">
           {(['small', 'medium', 'large'] as const).map((s) => (
-            <button
-              key={s}
-              type="button"
-              onClick={() => setSize(s)}
-              className={`flex-1 rounded border p-3 capitalize ${
-                size === s ? 'bg-blue-600 text-white' : 'bg-white'
-              }`}
-            >
+            <Chip key={s} active={size === s} color={col} onClick={() => setSize(s)}>
               {s}
-            </button>
+            </Chip>
           ))}
         </div>
       )}
-      <label className="block">
-        <span className="text-sm text-slate-600">Time</span>
-        <input
-          type="datetime-local"
-          value={when}
-          onChange={(e) => setWhen(e.target.value)}
-          className="mt-1 w-full rounded border p-3"
-        />
-      </label>
-      <div className="flex gap-2">
-        <button onClick={onClose} className="flex-1 rounded border p-3">
-          Cancel
-        </button>
-        <button onClick={handleSave} className="flex-1 rounded bg-blue-600 p-3 font-bold text-white">
-          Save
-        </button>
-      </div>
-      {initial && onDelete && (
-        <button onClick={onDelete} className="w-full rounded border border-red-500 p-3 font-semibold text-red-600">
-          Delete
-        </button>
-      )}
+
+      <TimeField value={when} onChange={setWhen} />
+      <SaveButton color={col} label="nappy" onClick={handleSave} />
+      {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>
   )
 }
