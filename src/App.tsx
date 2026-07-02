@@ -6,6 +6,7 @@ import SettingsPage from './pages/SettingsPage'
 import AuthGate from './components/AuthGate'
 import { HomeIcon, CalendarIcon, ChartIcon, GearIcon } from './components/icons'
 import { palette } from './lib/theme'
+import { useSync } from './hooks/useSync'
 
 const navItems = [
   { to: '/', label: 'Home', Icon: HomeIcon },
@@ -17,6 +18,16 @@ const navItems = [
 export default function App() {
   return (
     <AuthGate>
+      <AuthedApp />
+    </AuthGate>
+  )
+}
+
+/** The signed-in app. Runs background sync (mounts only when authenticated). */
+function AuthedApp() {
+  useSync()
+  return (
+    <>
       <div className="mx-auto min-h-screen max-w-md bg-cream pb-24">
         <Routes>
           <Route path="/" element={<HomePage />} />
@@ -48,6 +59,6 @@ export default function App() {
           ))}
         </nav>
       </div>
-    </AuthGate>
+    </>
   )
 }
