@@ -1,42 +1,114 @@
 import { db } from './schema'
-import type { Baby, Medication, BabyEvent } from './schema'
+import type { Baby, Medication, BabyEvent, SyncTable, SyncFields } from './schema'
 
 const BABY_ID = 1
+
+/** Fields the caller never supplies — the storage layer owns identity + bookkeeping. */
+type SyncKeys = keyof SyncFields
+export type BabyInput = Omit<Baby, 'id' | SyncKeys>
+export type MedicationInput = Omit<Medication, 'id' | SyncKeys>
+
+/** Queue a record for the sync outbox. Must run inside the caller's rw transaction. */
+function enqueue(table: SyncTable, uid: string): Promise<[SyncTable, string]> {
+  return db._pending.put({ table, uid, queuedAt: Date.now() })
+}
 
 // --- Baby ---
 export async function getBaby(): Promise<Baby | undefined> {
   return db.babies.get(BABY_ID)
 }
-export async function saveBaby(input: Omit<Baby, 'id'>): Promise<void> {
-  await db.babies.put({ id: BABY_ID, ...input })
+export async function saveBaby(input: BabyInput): Promise<void> {
+  await db.transaction('rw', db.babies, db._pending, async () => {
+    const existing = await db.babies.get(BABY_ID)
+    const uid = existing?.uid ?? crypto.randomUUID()
+    await db.babies.put({
+      ...input,
+      id: BABY_ID,
+      uid,
+      householdId: existing?.householdId ?? null,
+      updatedAt: Date.now(),
+      deletedAt: null,
+    })
+    await enqueue('babies', uid)
+  })
 }
 
 // --- Medications ---
 export async function listMedications(): Promise<Medication[]> {
-  return db.medications.toArray()
+  return db.medications.filter((m) => m.deletedAt == null).toArray()
 }
-export async function addMedication(input: Omit<Medication, 'id'>): Promise<number> {
-  return db.medications.add(input as Medication)
+export async function addMedication(input: MedicationInput): Promise<number> {
+  return db.transaction('rw', db.medications, db._pending, async () => {
+    const uid = crypto.randomUUID()
+    const id = await db.medications.add({
+      ...input,
+      uid,
+      householdId: null,
+      updatedAt: Date.now(),
+      deletedAt: null,
+    } as Medication)
+    await enqueue('medications', uid)
+    return id
+  })
 }
 export async function updateMedication(id: number, changes: Partial<Medication>): Promise<void> {
-  await db.medications.update(id, changes)
+  await db.transaction('rw', db.medications, db._pending, async () => {
+    const row = await db.medications.get(id)
+    if (!row) return
+    const uid = row.uid ?? crypto.randomUUID() // backfill if a legacy row slipped through
+    await db.medications.update(id, { ...changes, uid, updatedAt: Date.now() })
+    await enqueue('medications', uid)
+  })
 }
 export async function deleteMedication(id: number): Promise<void> {
-  await db.medications.delete(id)
+  await db.transaction('rw', db.medications, db._pending, async () => {
+    const row = await db.medications.get(id)
+    if (!row) return
+    const uid = row.uid ?? crypto.randomUUID()
+    const now = Date.now()
+    await db.medications.update(id, { uid, deletedAt: now, updatedAt: now })
+    await enqueue('medications', uid)
+  })
 }
 
 // --- Events ---
 export async function listEvents(): Promise<BabyEvent[]> {
-  return db.events.orderBy('occurredAt').reverse().toArray()
+  const rows = await db.events.orderBy('occurredAt').reverse().toArray()
+  return rows.filter((e) => e.deletedAt == null)
 }
 export async function addEvent(event: BabyEvent): Promise<number> {
-  return db.events.add(event)
+  return db.transaction('rw', db.events, db._pending, async () => {
+    const uid = crypto.randomUUID()
+    const id = await db.events.add({
+      ...event,
+      id: undefined, // let Dexie assign the local auto-increment key
+      uid,
+      householdId: event.householdId ?? null,
+      updatedAt: Date.now(),
+      deletedAt: null,
+    })
+    await enqueue('events', uid)
+    return id
+  })
 }
 export async function updateEvent(id: number, changes: Partial<BabyEvent>): Promise<void> {
-  await db.events.update(id, changes)
+  await db.transaction('rw', db.events, db._pending, async () => {
+    const row = await db.events.get(id)
+    if (!row) return
+    const uid = row.uid ?? crypto.randomUUID() // backfill if a legacy row slipped through
+    await db.events.update(id, { ...changes, uid, updatedAt: Date.now() })
+    await enqueue('events', uid)
+  })
 }
 export async function deleteEvent(id: number): Promise<void> {
-  await db.events.delete(id)
+  await db.transaction('rw', db.events, db._pending, async () => {
+    const row = await db.events.get(id)
+    if (!row) return
+    const uid = row.uid ?? crypto.randomUUID()
+    const now = Date.now()
+    await db.events.update(id, { uid, deletedAt: now, updatedAt: now })
+    await enqueue('events', uid)
+  })
 }
 
 // --- Backup ---
@@ -52,12 +124,37 @@ export async function importAll(data: {
   medications: Medication[]
   events: BabyEvent[]
 }): Promise<void> {
-  await db.transaction('rw', db.babies, db.medications, db.events, async () => {
+  await db.transaction('rw', db.babies, db.medications, db.events, db._pending, async () => {
     await db.babies.clear()
     await db.medications.clear()
     await db.events.clear()
-    if (data.baby) await db.babies.put(data.baby)
-    if (data.medications.length) await db.medications.bulkAdd(data.medications)
-    if (data.events.length) await db.events.bulkAdd(data.events)
+    await db._pending.clear() // restore replaces local state; old queue is moot
+
+    const now = Date.now()
+    // Preserve an incoming uid (restoring a synced backup keeps identity stable);
+    // stamp a fresh one for legacy/pre-v3 backups so the invariant holds.
+    const prep = <T extends SyncFields>(r: T): T => ({
+      ...r,
+      uid: r.uid ?? crypto.randomUUID(),
+      householdId: r.householdId ?? null,
+      updatedAt: r.updatedAt ?? now,
+      deletedAt: r.deletedAt ?? null,
+    })
+    const pendingFor = (table: SyncTable, rows: SyncFields[]) =>
+      rows.map((r) => ({ table, uid: r.uid as string, queuedAt: now }))
+
+    const baby = data.baby ? prep(data.baby) : undefined
+    const meds = data.medications.map(prep)
+    const events = data.events.map(prep)
+    if (baby) await db.babies.put(baby)
+    if (meds.length) await db.medications.bulkAdd(meds)
+    if (events.length) await db.events.bulkAdd(events)
+
+    const refs = [
+      ...(baby ? pendingFor('babies', [baby]) : []),
+      ...pendingFor('medications', meds),
+      ...pendingFor('events', events),
+    ]
+    if (refs.length) await db._pending.bulkPut(refs)
   })
 }
