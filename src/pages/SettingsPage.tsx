@@ -3,6 +3,7 @@ import { useBaby } from '../hooks/useBaby'
 import { useMedications } from '../hooks/useEvents'
 import { saveBaby, addMedication, deleteMedication, exportAll, importAll } from '../db/storage'
 import { serializeBackup, parseBackup } from '../lib/backup'
+import { signOut } from '../lib/auth'
 import { eventColor, palette } from '../lib/theme'
 import type { MedicationUnit } from '../db/schema'
 
@@ -149,6 +150,15 @@ export default function SettingsPage() {
             }}
           />
         </label>
+      </Card>
+
+      <Card title="Account">
+        <button
+          onClick={() => signOut()}
+          className="press w-full rounded-2xl border border-faint py-3 font-bold text-ink"
+        >
+          Sign out
+        </button>
       </Card>
     </div>
   )
