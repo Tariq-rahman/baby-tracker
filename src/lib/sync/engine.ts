@@ -249,6 +249,30 @@ export async function pull(): Promise<void> {
   await pullEvents()
 }
 
+/**
+ * Wipe the local synced cache and all sync bookkeeping. Used when the active
+ * household changes (accepting an invite): the local singleton baby and cursors
+ * belong to the *old* household, so we clear them and let the next `pull()`
+ * repopulate Dexie from the newly-joined household. Destructive to un-pushed
+ * local writes by design — joining replaces this device's data (the caller
+ * confirms first). Never throws into the UI on its own; caller handles errors.
+ */
+export async function resetLocalSync(): Promise<void> {
+  await db.transaction(
+    'rw',
+    [db.babies, db.medications, db.events, db._pending, db._sync],
+    async () => {
+      await Promise.all([
+        db.babies.clear(),
+        db.medications.clear(),
+        db.events.clear(),
+        db._pending.clear(),
+        db._sync.clear(),
+      ])
+    },
+  )
+}
+
 // --- realtime ---
 
 /**
