@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { useBaby } from '../hooks/useBaby'
 import { useMedications } from '../hooks/useEvents'
@@ -6,6 +6,14 @@ import { saveBaby, addMedication, deleteMedication, exportAll, importAll } from 
 import { serializeBackup, parseBackup } from '../lib/backup'
 import { signOut } from '../lib/auth'
 import { createInvite, acceptInvite, buildInviteLink, parseInviteCode } from '../lib/invites'
+import {
+  isPushSupported,
+  getReminderState,
+  enableReminders,
+  disableReminders,
+  setReminderInterval,
+  DEFAULT_INTERVAL_MINUTES,
+} from '../lib/push'
 import { eventColor, palette } from '../lib/theme'
 import type { MedicationUnit } from '../db/schema'
 
@@ -104,6 +112,96 @@ function SharingCard() {
       >
         Join household
       </button>
+    </Card>
+  )
+}
+
+const INTERVAL_OPTIONS: { minutes: number; label: string }[] = [
+  { minutes: 120, label: '2 hours' },
+  { minutes: 150, label: '2.5 hours' },
+  { minutes: 180, label: '3 hours' },
+  { minutes: 210, label: '3.5 hours' },
+  { minutes: 240, label: '4 hours' },
+]
+
+function RemindersCard() {
+  const supported = isPushSupported()
+  const [enabled, setEnabled] = useState(false)
+  const [intervalMinutes, setIntervalMinutes] = useState(DEFAULT_INTERVAL_MINUTES)
+  const [busy, setBusy] = useState(false)
+
+  useEffect(() => {
+    if (!supported) return
+    void getReminderState().then((s) => {
+      setEnabled(s.enabled)
+      setIntervalMinutes(s.intervalMinutes)
+    })
+  }, [supported])
+
+  const toggle = async () => {
+    setBusy(true)
+    try {
+      if (enabled) {
+        await disableReminders()
+        setEnabled(false)
+      } else {
+        await enableReminders(intervalMinutes)
+        setEnabled(true)
+      }
+    } catch (err) {
+      alert(`Could not update reminders: ${(err as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const changeInterval = async (minutes: number) => {
+    setIntervalMinutes(minutes)
+    if (!enabled) return
+    try {
+      await setReminderInterval(minutes)
+    } catch (err) {
+      alert(`Could not update the reminder interval: ${(err as Error).message}`)
+    }
+  }
+
+  return (
+    <Card title="Feed reminders">
+      {!supported ? (
+        <p className="text-sm text-inkSoft">
+          This device doesn’t support push notifications. Install the app to your home screen and
+          try again.
+        </p>
+      ) : (
+        <>
+          <p className="mb-3 text-sm text-inkSoft">
+            Get a nudge when it’s been a while since the last bottle. Reminders are sent from the
+            cloud, so they arrive even with the app closed.
+          </p>
+
+          <label className="mb-1 block text-sm font-medium text-inkSoft">Remind me after</label>
+          <select
+            value={intervalMinutes}
+            onChange={(e) => void changeInterval(Number(e.target.value))}
+            className={`${field} mb-3`}
+          >
+            {INTERVAL_OPTIONS.map((o) => (
+              <option key={o.minutes} value={o.minutes}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+
+          <button
+            onClick={toggle}
+            disabled={busy}
+            className="press w-full rounded-2xl py-3 font-bold text-white disabled:opacity-50"
+            style={{ background: enabled ? palette.ink : palette.ring }}
+          >
+            {enabled ? 'Turn off reminders' : 'Turn on reminders'}
+          </button>
+        </>
+      )}
     </Card>
   )
 }
@@ -242,6 +340,8 @@ export default function SettingsPage() {
       </Card>
 
       <SharingCard />
+
+      <RemindersCard />
 
       <Card title="Account">
         <button
