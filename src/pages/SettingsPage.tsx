@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useBaby } from '../hooks/useBaby'
 import { useMedications } from '../hooks/useEvents'
 import { saveBaby, addMedication, deleteMedication, exportAll, importAll } from '../db/storage'
 import { serializeBackup, parseBackup } from '../lib/backup'
 import { signOut } from '../lib/auth'
+import { createInvite, acceptInvite, buildInviteLink, parseInviteCode } from '../lib/invites'
 import { eventColor, palette } from '../lib/theme'
 import type { MedicationUnit } from '../db/schema'
 
@@ -16,6 +18,93 @@ function Card({ title, children }: { title: string; children: React.ReactNode })
       <h2 className="mb-3 text-lg font-bold text-ink">{title}</h2>
       {children}
     </section>
+  )
+}
+
+function SharingCard() {
+  const [params] = useSearchParams()
+  const [code, setCode] = useState('')
+  const [link, setLink] = useState('')
+  // Deep link `/settings?invite=CODE` prefills the join field at mount.
+  const [joinCode, setJoinCode] = useState(() => parseInviteCode(`?${params.toString()}`) ?? '')
+  const [busy, setBusy] = useState(false)
+
+  const invite = async () => {
+    setBusy(true)
+    try {
+      const c = await createInvite()
+      setCode(c)
+      setLink(buildInviteLink(c, window.location.origin))
+    } catch (err) {
+      alert(`Could not create an invite: ${(err as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const join = async () => {
+    if (!joinCode.trim()) return
+    if (!confirm('Joining will REPLACE the data on this device with the shared household. Continue?'))
+      return
+    setBusy(true)
+    try {
+      const { householdName } = await acceptInvite(joinCode)
+      alert(`Joined ${householdName}. Reloading with the shared data…`)
+      window.location.assign('/')
+    } catch (err) {
+      alert(`Could not join: ${(err as Error).message}`)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card title="Sharing">
+      <p className="mb-3 text-sm text-inkSoft">
+        Invite another caregiver to share this baby, or join a household you were invited to.
+      </p>
+
+      <button
+        onClick={invite}
+        disabled={busy}
+        className="press mb-3 w-full rounded-2xl py-3 font-bold text-white disabled:opacity-50"
+        style={{ background: palette.ring }}
+      >
+        Invite a caregiver
+      </button>
+
+      {code && (
+        <div className="mb-4 rounded-2xl border border-faint bg-cream p-3">
+          <p className="mb-1 text-sm text-inkSoft">Share this code (valid 7 days, one use):</p>
+          <p className="mb-2 select-all font-mono text-2xl font-bold tracking-widest text-ink">{code}</p>
+          <button
+            onClick={() => {
+              void navigator.clipboard?.writeText(link)
+              alert('Invite link copied.')
+            }}
+            className="press w-full rounded-2xl border border-faint py-2.5 text-sm font-semibold text-ink"
+          >
+            Copy invite link
+          </button>
+        </div>
+      )}
+
+      <label className="mb-1 block text-sm font-medium text-inkSoft">Have a code?</label>
+      <input
+        placeholder="Invite code"
+        value={joinCode}
+        onChange={(e) => setJoinCode(e.target.value)}
+        className={`${field} mb-2 font-mono uppercase tracking-widest`}
+      />
+      <button
+        onClick={join}
+        disabled={busy || !joinCode.trim()}
+        className="press w-full rounded-2xl py-3 font-bold text-white disabled:opacity-50"
+        style={{ background: palette.ink }}
+      >
+        Join household
+      </button>
+    </Card>
   )
 }
 
@@ -151,6 +240,8 @@ export default function SettingsPage() {
           />
         </label>
       </Card>
+
+      <SharingCard />
 
       <Card title="Account">
         <button
