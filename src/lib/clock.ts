@@ -17,3 +17,12 @@ export function eventAngle(date: Date): number {
   const m = date.getMinutes()
   return (h + m / 60) * 30
 }
+
+/**
+ * Which track a time sits on: the AM (inner) band before noon, the PM (outer)
+ * band from noon on. Used for both event markers and the now-hand so a 6am and
+ * a 6pm reading are visually separated.
+ */
+export function bandRadius(date: Date, innerR: number, outerR: number): number {
+  return date.getHours() >= 12 ? outerR : innerR
+}

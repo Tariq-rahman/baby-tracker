@@ -1,10 +1,11 @@
-// The central 12-hour dial. AM events ride the inner (dotted) track, PM events
-// the outer ring, so a 6am feed and a 6pm feed never collide. Weight is tracked
-// on its own page, so only feed / nappy / dose are plotted here.
+// The central 12-hour dial. AM events ride the inner (night) track, PM events
+// the outer (day) track, so a 6am feed and a 6pm feed never collide. A warm day
+// wash and a cool night wash make the AM/PM split legible at a glance, and the
+// now-hand rides whichever band the current time falls on. Weight is tracked on
+// its own page, so only feed / nappy / dose are plotted here.
 import type { BabyEvent } from '../db/schema'
-import { polar, eventAngle } from '../lib/clock'
+import { polar, eventAngle, bandRadius } from '../lib/clock'
 import { palette, eventColor } from '../lib/theme'
-import { EventIcon } from './icons'
 
 interface Props {
   size?: number
@@ -20,11 +21,12 @@ const PLOTTED = new Set(['feed', 'nappy', 'dose'])
 export default function Clock({ size = 296, events, now, centerTime, centerAmpm, hint }: Props) {
   const cx = size / 2
   const cy = size / 2
-  const outerR = size / 2 - 30 // PM track
-  const innerR = outerR - 44 // AM track
+  const outerR = size / 2 - 30 // PM (day) track
+  const innerR = outerR - 44 // AM (night) track
+  const band = outerR - innerR
 
   const nowDeg = eventAngle(now)
-  const handTip = polar(cx, cy, outerR + 8, nowDeg)
+  const handTip = polar(cx, cy, bandRadius(now, innerR, outerR) + 8, nowDeg)
 
   const ticks = []
   for (let i = 0; i < 12; i++) {
@@ -67,8 +69,7 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
     .map((ev, idx) => {
       const date = new Date(ev.occurredAt)
       const deg = eventAngle(date)
-      const pm = date.getHours() >= 12
-      const p = polar(cx, cy, pm ? outerR : innerR, deg)
+      const p = polar(cx, cy, bandRadius(date, innerR, outerR), deg)
       const col = eventColor[ev.type]
       return (
         <div
@@ -76,17 +77,17 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
           style={{ position: 'absolute', left: p.x, top: p.y, transform: 'translate(-50%,-50%)' }}
         >
           <div className="mpop" style={{ animationDelay: `${idx * 45}ms` }}>
-            <div
-              className="flex items-center justify-center rounded-full"
-              style={{
-                width: 30,
-                height: 30,
-                background: palette.surface,
-                border: `2px solid ${col}`,
-                boxShadow: `0 2px 8px ${col}3a, 0 0 0 4px ${palette.cream}`,
-              }}
-            >
-              <EventIcon type={ev.type} size={17} color={col} sw={1.9} />
+            {/* a coloured tick, aligned radially so it reads like a clock mark */}
+            <div style={{ transform: `rotate(${deg}deg)` }}>
+              <div
+                style={{
+                  width: 5.5,
+                  height: 18,
+                  borderRadius: 4,
+                  background: col,
+                  boxShadow: `0 0 0 3px ${palette.surface}`,
+                }}
+              />
             </div>
           </div>
         </div>
@@ -94,17 +95,24 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
     })
 
   return (
-    <div className="relative mx-auto" style={{ width: size, height: size }}>
-      <svg width={size} height={size} className="block">
-        <circle cx={cx} cy={cy} r={outerR} fill="none" stroke={palette.ring} strokeWidth="2" opacity="0.5" />
+    <div className="mx-auto" style={{ width: size }}>
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="block">
+        {/* day band (PM, outer) — warm, sunny */}
+        <circle cx={cx} cy={cy} r={outerR} fill="none" stroke={palette.day} strokeWidth={band * 0.86} opacity="0.38" />
+        {/* night band (AM, inner) — cool, calm */}
+        <circle cx={cx} cy={cy} r={innerR} fill="none" stroke={palette.night} strokeWidth={band * 0.66} opacity="0.32" />
+
+        {/* track guide lines */}
+        <circle cx={cx} cy={cy} r={outerR} fill="none" stroke={palette.ring} strokeWidth="1.5" opacity="0.4" />
         <circle
           cx={cx}
           cy={cy}
           r={innerR}
           fill="none"
           stroke={palette.ring}
-          strokeWidth="1.5"
-          opacity="0.32"
+          strokeWidth="1.2"
+          opacity="0.3"
           strokeDasharray="2 5"
           strokeLinecap="round"
         />
@@ -153,6 +161,19 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
             {hint}
           </div>
         )}
+        </div>
+      </div>
+
+      {/* AM / PM legend — kept outside the dial so it never covers markers */}
+      <div className="mt-2 flex justify-center gap-5 text-xs font-semibold text-inkSoft">
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ background: palette.night }} />
+          AM · inner
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ background: palette.day }} />
+          PM · outer
+        </span>
       </div>
     </div>
   )

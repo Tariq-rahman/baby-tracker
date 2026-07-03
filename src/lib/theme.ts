@@ -12,6 +12,8 @@ export const palette = {
   inkSoft: '#9A8979',
   ring: '#C8674F',
   faint: '#DCCBB8',
+  day: '#F5D4A0', // warm wash behind the PM (outer) track
+  night: '#BEB0C8', // cool wash behind the AM (inner) track
 } as const
 
 /** Accent colour per event type. */
