@@ -64,6 +64,66 @@ describe('BottleSheet', () => {
     expect(onSave.mock.calls[0][0].createdAt).not.toBe('2026-06-09T08:00:00.000Z')
   })
 
+  it('selects a volume from the preset carousel', async () => {
+    const onSave = vi.fn()
+    render(<BottleSheet onSave={onSave} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: '210' }))
+    expect(screen.getByLabelText(/volume/i)).toHaveValue(210)
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    expect(onSave).toHaveBeenCalledWith(expect.objectContaining({ volumeMl: 210 }))
+  })
+
+  it('preserves the original time when editing and the time is untouched', async () => {
+    const onSave = vi.fn()
+    const initial = {
+      id: 7,
+      type: 'feed' as const,
+      volumeMl: 120,
+      occurredAt: '2026-06-09T08:00:00.000Z',
+      createdAt: '2026-06-09T08:00:00.000Z',
+    }
+    render(<BottleSheet initial={initial} onSave={onSave} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ occurredAt: '2026-06-09T08:00:00.000Z' }),
+    )
+  })
+
+  it('steps the logged time back five minutes per tap', async () => {
+    const onSave = vi.fn()
+    const initial = {
+      id: 7,
+      type: 'feed' as const,
+      volumeMl: 120,
+      occurredAt: '2026-06-09T08:00:00.000Z',
+      createdAt: '2026-06-09T08:00:00.000Z',
+    }
+    render(<BottleSheet initial={initial} onSave={onSave} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /5 minutes earlier/i }))
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ occurredAt: '2026-06-09T07:55:00.000Z' }),
+    )
+  })
+
+  it('snaps an off-grid time to the nearest 5 minutes when stepping back', async () => {
+    const onSave = vi.fn()
+    const initial = {
+      id: 7,
+      type: 'feed' as const,
+      volumeMl: 120,
+      occurredAt: '2026-06-09T08:02:00.000Z', // off the 5-min grid
+      createdAt: '2026-06-09T08:02:00.000Z',
+    }
+    render(<BottleSheet initial={initial} onSave={onSave} onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('button', { name: /5 minutes earlier/i }))
+    await userEvent.click(screen.getByRole('button', { name: /save/i }))
+    // 08:02 rounds to 08:00, then one step back → 07:55
+    expect(onSave).toHaveBeenCalledWith(
+      expect.objectContaining({ occurredAt: '2026-06-09T07:55:00.000Z' }),
+    )
+  })
+
   it('shows a delete button only when editing', async () => {
     const onDelete = vi.fn()
     const initial = {

@@ -1,9 +1,15 @@
 import { useState } from 'react'
 import type { FeedEvent, FeedContent } from '../../db/schema'
-import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
 import { eventColor, palette } from '../../lib/theme'
 import { MinusIcon, PlusIcon } from '../icons'
-import { Chip, DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
+import {
+  Chip,
+  DeleteButton,
+  DragHandle,
+  QuickTimeRow,
+  SaveButton,
+  SheetHeader,
+} from './sheetParts'
 
 interface Props {
   initial?: FeedEvent
@@ -14,14 +20,15 @@ interface Props {
   onClose: () => void
 }
 
-const PRESETS = [60, 90, 120, 150]
+// Horizontal carousel of common bottle volumes (ml); edge items fade under a mask.
+const PRESETS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300]
 const col = eventColor.feed
 
 export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClose }: Props) {
   const prefill = initial ?? lastFeed
   const [volume, setVolume] = useState(prefill ? String(prefill.volumeMl) : '')
   const [content, setContent] = useState<FeedContent | undefined>(prefill?.content)
-  const [when, setWhen] = useState(initial ? isoToLocalInput(initial.occurredAt) : nowLocalInput())
+  const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
 
   function bump(delta: number) {
     setVolume(String(Math.max(0, (Number(volume) || 0) + delta)))
@@ -34,7 +41,7 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
       type: 'feed',
       volumeMl,
       content,
-      occurredAt: localInputToIso(when),
+      occurredAt: when.toISOString(),
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     })
     onClose()
@@ -69,12 +76,41 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
         </button>
       </div>
 
-      <div className="mb-4 flex gap-2">
-        {PRESETS.map((v) => (
-          <Chip key={v} active={Number(volume) === v} color={col} onClick={() => setVolume(String(v))}>
-            {v}
-          </Chip>
-        ))}
+      <div
+        className="-mx-5 mb-4 flex gap-2.5 overflow-x-auto px-5 pb-0.5"
+        style={{
+          scrollSnapType: 'x proximity',
+          WebkitOverflowScrolling: 'touch',
+          WebkitMaskImage:
+            'linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 40px), transparent 100%)',
+          maskImage:
+            'linear-gradient(to right, transparent 0, #000 20px, #000 calc(100% - 40px), transparent 100%)',
+        }}
+      >
+        {PRESETS.map((v) => {
+          const active = Number(volume) === v
+          return (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setVolume(String(v))}
+              className="press tnum shrink-0 rounded-[18px] py-5 text-[22px] font-bold"
+              style={{
+                flex: '0 0 calc((100% - 40px) / 3.3)',
+                scrollSnapAlign: 'start',
+                ...(active
+                  ? { border: `1.8px solid ${col}`, background: `${col}1f`, color: col }
+                  : {
+                      border: `1.6px solid ${palette.faint}`,
+                      background: palette.surface,
+                      color: palette.inkSoft,
+                    }),
+              }}
+            >
+              {v}
+            </button>
+          )
+        })}
       </div>
 
       <div className="mb-4 flex gap-2">
@@ -90,7 +126,7 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
         ))}
       </div>
 
-      <TimeField value={when} onChange={setWhen} />
+      <QuickTimeRow value={when} onChange={setWhen} />
       <SaveButton color={col} label="feed" onClick={handleSave} />
       {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>
