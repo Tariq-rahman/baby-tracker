@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { FeedEvent, FeedContent } from '../../db/schema'
 import { eventColor, palette } from '../../lib/theme'
 import { MinusIcon, PlusIcon } from '../icons'
@@ -29,6 +29,18 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
   const [volume, setVolume] = useState(prefill ? String(prefill.volumeMl) : '')
   const [content, setContent] = useState<FeedContent | undefined>(prefill?.content)
   const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
+
+  // Centre the pre-selected preset in the carousel on open, so an edited/prefilled
+  // volume (e.g. 210) isn't hidden off to the right.
+  const carouselRef = useRef<HTMLDivElement>(null)
+  const activeRef = useRef<HTMLButtonElement>(null)
+  useLayoutEffect(() => {
+    const container = carouselRef.current
+    const active = activeRef.current
+    if (!container || !active) return
+    const offset = active.offsetLeft - (container.clientWidth - active.offsetWidth) / 2
+    container.scrollLeft = Math.max(0, offset)
+  }, [])
 
   function bump(delta: number) {
     setVolume(String(Math.max(0, (Number(volume) || 0) + delta)))
@@ -77,7 +89,8 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
       </div>
 
       <div
-        className="-mx-5 mb-4 flex gap-2.5 overflow-x-auto px-5 pb-0.5"
+        ref={carouselRef}
+        className="no-scrollbar relative -mx-5 mb-4 flex gap-2.5 overflow-x-auto px-5 pb-0.5"
         style={{
           scrollSnapType: 'x proximity',
           WebkitOverflowScrolling: 'touch',
@@ -92,6 +105,7 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
           return (
             <button
               key={v}
+              ref={active ? activeRef : undefined}
               type="button"
               onClick={() => setVolume(String(v))}
               className="press tnum shrink-0 rounded-[18px] py-5 text-[22px] font-bold"

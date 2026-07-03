@@ -30,6 +30,9 @@
     font-feature-settings: 'tnum' 1;
   }
   /* hide scrollbars on the scrollable app body */
+  .no-scrollbar {
+    scrollbar-width: none;
+  }
   .no-scrollbar::-webkit-scrollbar {
     width: 0;
     height: 0;
