@@ -2703,19 +2703,19 @@ git push
 
 ### Task 23: Install on the Android phone + smoke test
 
-- [ ] **Step 1: Install**
+- [x] **Step 1: Install**
 
 On the Android phone, open the Vercel URL in Chrome → menu → **Add to Home screen / Install app**. Confirm it installs with the icon and launches standalone (no browser chrome).
 
-- [ ] **Step 2: Real-world smoke test**
+- [x] **Step 2: Real-world smoke test**
 
 Log a bottle, a nappy, a dose, and a weight. Confirm since-last, daily totals, history, and the weight chart all behave. Toggle airplane mode and confirm the app still opens and logs offline (data persists locally).
 
-- [ ] **Step 3: Export a backup from the phone**
+- [x] **Step 3: Export a backup from the phone**
 
 Use Settings → Export JSON and confirm the file saves to the device. Keep this as your first backup.
 
-> **CHECKPOINT E** — The PWA is installed on the user's Android phone, works offline, and backs up. MVP complete.
+> **CHECKPOINT E** ✅ **COMPLETE (2026-06-10)** — The PWA is installed on the user's Android phone, works offline, and backs up. **MVP COMPLETE.** Live at https://baby-tracker-seven-gray.vercel.app/.
 
 ---
 

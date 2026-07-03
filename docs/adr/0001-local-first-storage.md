@@ -1,6 +1,8 @@
 ---
-status: accepted
+status: superseded-in-part by 0002
 ---
+
+> **Superseded in part by [ADR-0002](0002-accounts-and-supabase-sync.md) (2026-07-02).** Baby data now lives server-side (Supabase), synced to a local Dexie cache, to enable accounts and multi-caregiver sharing. The engineering discipline below — all persistence behind the `src/db/storage.ts` boundary — is unchanged and is precisely what made that migration cheap. JSON export/import is retained as backup and as the local-data migration path.
 
 # Local-first storage with no backend for the MVP
 
