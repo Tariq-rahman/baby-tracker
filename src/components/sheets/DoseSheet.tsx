@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { DoseEvent, Medication } from '../../db/schema'
-import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
 import { eventColor, palette } from '../../lib/theme'
-import { DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
+import { DeleteButton, DragHandle, QuickTimeRow, SaveButton, SheetHeader } from './sheetParts'
 
 interface Props {
   medications: Medication[]
@@ -20,7 +19,7 @@ export default function DoseSheet({ medications, initial, onSave, onDelete, onCl
   const [dose, setDose] = useState(
     initial ? String(initial.doseAmount) : String(medications[0]?.defaultDose ?? ''),
   )
-  const [when, setWhen] = useState(initial ? isoToLocalInput(initial.occurredAt) : nowLocalInput())
+  const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
 
   if (medications.length === 0) {
     return (
@@ -43,7 +42,7 @@ export default function DoseSheet({ medications, initial, onSave, onDelete, onCl
       type: 'dose',
       medicationId: medId,
       doseAmount,
-      occurredAt: localInputToIso(when),
+      occurredAt: when.toISOString(),
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     })
     onClose()
@@ -89,7 +88,7 @@ export default function DoseSheet({ medications, initial, onSave, onDelete, onCl
         />
       </label>
 
-      <TimeField value={when} onChange={setWhen} />
+      <QuickTimeRow value={when} onChange={setWhen} />
       <SaveButton color={col} label="meds" onClick={handleSave} />
       {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>

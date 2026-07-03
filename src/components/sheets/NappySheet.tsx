@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import type { NappyEvent, NappyType, NappySize } from '../../db/schema'
-import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
 import { eventColor } from '../../lib/theme'
-import { Chip, DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
+import { Chip, DeleteButton, DragHandle, QuickTimeRow, SaveButton, SheetHeader } from './sheetParts'
 
 interface Props {
   initial?: NappyEvent
@@ -17,7 +16,7 @@ const col = eventColor.nappy
 export default function NappySheet({ initial, onSave, onDelete, onClose }: Props) {
   const [nappyType, setNappyType] = useState<NappyType | undefined>(initial?.nappyType)
   const [size, setSize] = useState<NappySize | undefined>(initial?.size)
-  const [when, setWhen] = useState(initial ? isoToLocalInput(initial.occurredAt) : nowLocalInput())
+  const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
 
   function handleSave() {
     if (!nappyType) return
@@ -26,7 +25,7 @@ export default function NappySheet({ initial, onSave, onDelete, onClose }: Props
       type: 'nappy',
       nappyType,
       size: needsSize(nappyType) ? size : undefined,
-      occurredAt: localInputToIso(when),
+      occurredAt: when.toISOString(),
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     })
     onClose()
@@ -63,7 +62,7 @@ export default function NappySheet({ initial, onSave, onDelete, onClose }: Props
         </div>
       )}
 
-      <TimeField value={when} onChange={setWhen} />
+      <QuickTimeRow value={when} onChange={setWhen} />
       <SaveButton color={col} label="nappy" onClick={handleSave} />
       {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>

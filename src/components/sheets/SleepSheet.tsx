@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
 import type { SleepEvent } from '../../db/schema'
-import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
 import { fmtElapsed, formatSleepDuration } from '../../lib/stats'
 import { eventColor } from '../../lib/theme'
-import { DeleteButton, DragHandle, SheetHeader, TimeField } from './sheetParts'
+import { DeleteButton, DragHandle, QuickTimeRow, SheetHeader } from './sheetParts'
 
 interface Props {
   /** Present when editing — a completed sleep, or a running one (endedAt null). */
@@ -17,16 +16,16 @@ interface Props {
 
 const col = eventColor.sleep
 
-/** Local datetime-input string for 45 minutes ago — a sensible default nap start. */
-function defaultStart(): string {
-  return isoToLocalInput(new Date(Date.now() - 45 * 60000).toISOString())
+/** 45 minutes ago — a sensible default nap start. */
+function defaultStart(): Date {
+  return new Date(Date.now() - 45 * 60000)
 }
 
 export default function SleepSheet({ initial, hasRunning, onSave, onDelete, onClose }: Props) {
   const isRunning = initial != null && initial.endedAt == null
 
-  const [start, setStart] = useState(initial ? isoToLocalInput(initial.occurredAt) : defaultStart())
-  const [end, setEnd] = useState(initial?.endedAt ? isoToLocalInput(initial.endedAt) : nowLocalInput())
+  const [start, setStart] = useState(() => (initial ? new Date(initial.occurredAt) : defaultStart()))
+  const [end, setEnd] = useState(() => (initial?.endedAt ? new Date(initial.endedAt) : new Date()))
 
   // Tick once a second so a running sleep's live timer counts up.
   const [now, setNow] = useState(() => Date.now())
@@ -36,8 +35,8 @@ export default function SleepSheet({ initial, hasRunning, onSave, onDelete, onCl
     return () => clearInterval(t)
   }, [isRunning])
 
-  const startMs = Date.parse(localInputToIso(start))
-  const endMs = isRunning ? now : Date.parse(localInputToIso(end))
+  const startMs = start.getTime()
+  const endMs = isRunning ? now : end.getTime()
   const durationMin = (endMs - startMs) / 60000
 
   function startNow() {
@@ -49,7 +48,7 @@ export default function SleepSheet({ initial, hasRunning, onSave, onDelete, onCl
   function saveFinished(endIso: string) {
     onSave({
       type: 'sleep',
-      occurredAt: localInputToIso(start),
+      occurredAt: start.toISOString(),
       endedAt: endIso,
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     })
@@ -89,8 +88,8 @@ export default function SleepSheet({ initial, hasRunning, onSave, onDelete, onCl
         </>
       )}
 
-      <TimeField label="Start" value={start} onChange={setStart} />
-      {!isRunning && <TimeField label="End" value={end} onChange={setEnd} />}
+      <QuickTimeRow label="Start" value={start} onChange={setStart} />
+      {!isRunning && <QuickTimeRow label="End" value={end} onChange={setEnd} />}
 
       {durationMin > 0 && (
         <div className="mb-4 text-center text-sm font-semibold text-inkSoft">
@@ -108,7 +107,7 @@ export default function SleepSheet({ initial, hasRunning, onSave, onDelete, onCl
           className={bigBtn}
           style={bigBtnStyle}
           onClick={() => {
-            if (endMs > startMs) saveFinished(localInputToIso(end))
+            if (endMs > startMs) saveFinished(end.toISOString())
           }}
         >
           Save sleep

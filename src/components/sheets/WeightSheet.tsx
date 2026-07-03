@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import type { WeightEvent } from '../../db/schema'
 import { kgToGrams, lbOzToGrams, gramsToKg } from '../../lib/units'
-import { isoToLocalInput, localInputToIso, nowLocalInput } from '../../lib/datetime'
 import { eventColor, palette } from '../../lib/theme'
-import { DeleteButton, DragHandle, SaveButton, SheetHeader, TimeField } from './sheetParts'
+import { DeleteButton, DragHandle, QuickTimeRow, SaveButton, SheetHeader } from './sheetParts'
 
 interface Props {
   initial?: WeightEvent
@@ -20,7 +19,7 @@ export default function WeightSheet({ initial, onSave, onDelete, onClose }: Prop
   const [kg, setKg] = useState(initial ? String(gramsToKg(initial.grams)) : '')
   const [lb, setLb] = useState('')
   const [oz, setOz] = useState('')
-  const [when, setWhen] = useState(initial ? isoToLocalInput(initial.occurredAt) : nowLocalInput())
+  const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
 
   function handleSave() {
     const grams = mode === 'metric' ? kgToGrams(Number(kg)) : lbOzToGrams(Number(lb), Number(oz))
@@ -28,7 +27,7 @@ export default function WeightSheet({ initial, onSave, onDelete, onClose }: Prop
     onSave({
       type: 'weight',
       grams,
-      occurredAt: localInputToIso(when),
+      occurredAt: when.toISOString(),
       createdAt: initial?.createdAt ?? new Date().toISOString(),
     })
     onClose()
@@ -95,7 +94,7 @@ export default function WeightSheet({ initial, onSave, onDelete, onClose }: Prop
         </div>
       )}
 
-      <TimeField value={when} onChange={setWhen} />
+      <QuickTimeRow value={when} onChange={setWhen} />
       <SaveButton color={col} label="weight" onClick={handleSave} />
       {initial && onDelete && <DeleteButton onClick={onDelete} />}
     </div>

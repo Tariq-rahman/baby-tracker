@@ -68,28 +68,6 @@ export function Chip({
   )
 }
 
-export function TimeField({
-  value,
-  onChange,
-  label = 'Time',
-}: {
-  value: string
-  onChange: (v: string) => void
-  label?: string
-}) {
-  return (
-    <label className="mb-4 block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-inkSoft">{label}</span>
-      <input
-        type="datetime-local"
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-faint bg-surface p-3 text-ink"
-      />
-    </label>
-  )
-}
-
 /**
  * Compact time control for the logging sheets: shows "Just now" (or the clock
  * time when editing an older event) and steps back/forward in 5-minute taps.
