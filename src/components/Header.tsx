@@ -6,9 +6,11 @@ interface Props {
   baby: Baby | undefined
   now: Date
   stats: Stat[]
+  /** Small status line shown beside the name, e.g. "Last feed 2h ago". */
+  hint?: string
 }
 
-export default function Header({ baby, now, stats }: Props) {
+export default function Header({ baby, now, stats, hint }: Props) {
   const name = baby?.name || 'Baby'
   const dateLabel = now.toLocaleDateString(undefined, {
     weekday: 'long',
@@ -29,10 +31,15 @@ export default function Header({ baby, now, stats }: Props) {
         >
           {name.charAt(0).toUpperCase()}
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <div className="text-lg font-bold leading-tight text-ink">{name}</div>
           <div className="text-xs font-medium text-inkSoft">{subtitle}</div>
         </div>
+        {hint && (
+          <div className="shrink-0 whitespace-nowrap text-right text-xs font-semibold text-inkSoft">
+            {hint}
+          </div>
+        )}
       </div>
       <div className="mt-3.5">
         <StatStrip stats={stats} />

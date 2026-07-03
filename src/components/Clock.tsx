@@ -14,12 +14,11 @@ interface Props {
   now: Date
   centerTime: string
   centerAmpm: string
-  hint?: string
 }
 
 const PLOTTED = new Set(['feed', 'nappy', 'dose'])
 
-export default function Clock({ size = 296, events, now, centerTime, centerAmpm, hint }: Props) {
+export default function Clock({ size = 296, events, now, centerTime, centerAmpm }: Props) {
   const cx = size / 2
   const cy = size / 2
   const outerR = size / 2 - 30 // PM (day) track
@@ -27,7 +26,9 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
   const band = outerR - innerR
 
   const nowDeg = eventAngle(now)
-  const handTip = polar(cx, cy, bandRadius(now, innerR, outerR) + 8, nowDeg)
+  // The hand rides whichever band the current time falls on (inner for AM, outer
+  // for PM) and ends exactly on that band's arc, so its dot sits inline with it.
+  const handTip = polar(cx, cy, bandRadius(now, innerR, outerR), nowDeg)
 
   // Sleep arcs: each sleep (running → end = now) becomes per-band segments,
   // windowed to the last 24h. The running sleep gets a pulsing tip at its leading edge.
@@ -152,6 +153,17 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
 
         {ticks}
         {nums}
+      </svg>
+
+      {markers}
+
+      {/* the now-hand lives in an overlay above the markers so it never sits
+          behind a feed/nappy/dose tick */}
+      <svg
+        width={size}
+        height={size}
+        className="pointer-events-none absolute left-0 top-0 block"
+      >
         <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'sweep .7s cubic-bezier(.22,.9,.27,1) both' }}>
           <line
             x1={cx}
@@ -168,33 +180,26 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
         <circle cx={cx} cy={cy} r="5.5" fill={palette.ink} />
       </svg>
 
-      {markers}
-
       {/* center readout */}
       <div
         className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 flex-col items-center justify-center rounded-full text-center"
         style={{
-          width: innerR * 1.18,
-          height: innerR * 1.18,
+          width: innerR * 1.42,
+          height: innerR * 1.42,
           background: palette.surface,
           boxShadow: `inset 0 0 0 1px ${palette.ring}22, 0 8px 24px ${palette.ink}14`,
           pointerEvents: 'none',
         }}
       >
-        <div className="tnum font-bold leading-none text-ink" style={{ fontSize: 28, letterSpacing: '-0.02em' }}>
+        <div
+          className="tnum font-bold leading-none text-ink"
+          style={{ fontSize: 30, letterSpacing: '-0.02em', whiteSpace: 'nowrap' }}
+        >
           {centerTime}
-          <span className="font-semibold text-inkSoft" style={{ fontSize: 13, marginLeft: 2 }}>
+          <span className="font-semibold text-inkSoft" style={{ fontSize: 14, marginLeft: 2 }}>
             {centerAmpm}
           </span>
         </div>
-        {hint && (
-          <div
-            className="font-medium text-inkSoft"
-            style={{ fontSize: 12.5, marginTop: 6, maxWidth: innerR * 1.1, lineHeight: 1.3 }}
-          >
-            {hint}
-          </div>
-        )}
         </div>
       </div>
 

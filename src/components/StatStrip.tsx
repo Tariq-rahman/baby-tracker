@@ -12,15 +12,15 @@ export interface Stat {
 /** Row of small pill counters, one per event type. */
 export default function StatStrip({ stats }: { stats: Stat[] }) {
   return (
-    <div className="flex gap-2">
+    <div className="flex gap-1.5">
       {stats.map((s) => (
         <div
           key={s.type}
-          className="flex flex-1 items-center gap-1.5 rounded-2xl bg-surface px-2.5 py-2.5 shadow-sm"
+          className="flex min-w-0 flex-1 items-center gap-1 rounded-xl bg-surface px-2 py-2 shadow-sm"
         >
-          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: eventColor[s.type] }} />
-          <span className="tnum text-base font-bold text-ink">{s.value ?? s.count}</span>
-          <span className="truncate text-xs font-medium text-inkSoft">{s.label}</span>
+          <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: eventColor[s.type] }} />
+          <span className="tnum shrink-0 text-sm font-bold text-ink">{s.value ?? s.count}</span>
+          <span className="truncate text-[11px] font-medium text-inkSoft">{s.label}</span>
         </div>
       ))}
     </div>

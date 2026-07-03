@@ -82,6 +82,7 @@ export default function HomePage() {
       <Header
         baby={baby}
         now={now}
+        hint={hint}
         stats={[
           { type: 'feed', count: counts.feed, label: 'feeds' },
           { type: 'nappy', count: counts.nappy, label: 'changes' },
@@ -98,7 +99,7 @@ export default function HomePage() {
             onStop={handleStopSleep}
           />
         )}
-        <Clock events={events} now={now} centerTime={center.time} centerAmpm={center.ampm} hint={hint} />
+        <Clock events={events} now={now} centerTime={center.time} centerAmpm={center.ampm} />
         <LogButtons onPick={setAdding} />
 
         <div>

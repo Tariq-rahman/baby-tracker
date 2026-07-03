@@ -10,19 +10,17 @@ const events: BabyEvent[] = [
 ]
 
 describe('Clock', () => {
-  it('renders the centre time, am/pm and hint', () => {
+  it('renders the centre time and am/pm', () => {
     render(
       <Clock
         events={events}
         now={new Date('2026-06-10T15:20:00.000Z')}
         centerTime="3:20"
         centerAmpm="PM"
-        hint="Last feed 2h ago"
       />,
     )
     expect(screen.getByText('3:20')).toBeInTheDocument()
     expect(screen.getByText('PM')).toBeInTheDocument()
-    expect(screen.getByText('Last feed 2h ago')).toBeInTheDocument()
   })
 
   it('plots feed and nappy markers but excludes weight', () => {
