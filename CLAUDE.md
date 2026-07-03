@@ -25,6 +25,7 @@ A local-first, installable **PWA** for tracking a baby's feeds, nappies, weight,
 
 ## Conventions
 
+- **Docs & plans are tracked in this repo** (overrides the global "never commit plans/specs" rule and the resume skill's default of gitignoring `progress.md`). Commit `CONTEXT.md`, `docs/`, `docs/superpowers/plans/`, and `progress.md` alongside code changes.
 - Functions returning a collection are prefixed `list` (e.g. `listEvents`); functions returning a single item are prefixed `get` (e.g. `getEvent`).
 - Weight is always stored internally as **grams (integer, rounded)**; convert only at the UI boundary.
 - Event timestamps default to "now" but are always editable (backdating supported).
