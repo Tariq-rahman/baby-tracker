@@ -1,13 +1,21 @@
-import { useMemo, useRef, useState } from 'react'
+import { useRef, useState } from 'react'
 import { useEvents, useMedications } from '../hooks/useEvents'
 import { useBaby } from '../hooks/useBaby'
-import { listEventsForDay, getLastEventOfType } from '../lib/stats'
+import {
+  listEventsForDay,
+  getLastEventOfType,
+  getRunningSleep,
+  sleepMinutesForDay,
+  formatSleepDuration,
+} from '../lib/stats'
+import { stopSleep } from '../db/storage'
 import { fmtClock, relativeTime } from '../lib/format'
 import type { BabyEvent } from '../db/schema'
 import type { LogKind } from '../components/LogButtons'
 import Header from '../components/Header'
 import Clock from '../components/Clock'
 import LogButtons from '../components/LogButtons'
+import RunningSleepBanner from '../components/RunningSleepBanner'
 import EventList from '../components/EventList'
 import Toast, { type ToastData } from '../components/Toast'
 import EventSheet from '../components/sheets/EventSheet'
@@ -28,30 +36,45 @@ export default function HomePage() {
   const toastTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
 
   const now = new Date()
-  const todays = listEventsForDay(events, localToday())
+  const today = localToday()
+  const todays = listEventsForDay(events, today)
 
-  const counts = useMemo(() => {
-    const c = { feed: 0, nappy: 0, dose: 0 }
-    for (const e of todays) if (e.type in c) c[e.type as keyof typeof c] += 1
-    return c
-  }, [todays])
+  const counts = { feed: 0, nappy: 0, dose: 0 }
+  for (const e of todays) if (e.type in counts) counts[e.type as keyof typeof counts] += 1
+
+  const runningSleep = getRunningSleep(events)
+  const sleepToday = formatSleepDuration(sleepMinutesForDay(events, today, now))
 
   const lastFeed = getLastEventOfType(events, 'feed')
   const hint = lastFeed ? `Last feed ${relativeTime(lastFeed.occurredAt, now)}` : 'No feeds yet'
   const center = fmtClock(now)
 
   function showToast(event: BabyEvent) {
-    const text =
-      event.type === 'feed'
-        ? `Feed logged · ${event.volumeMl} ml`
-        : event.type === 'nappy'
-          ? `${event.nappyType} nappy logged`
-          : event.type === 'weight'
-            ? 'Weight logged'
-            : 'Meds logged'
+    let text: string
+    switch (event.type) {
+      case 'feed':
+        text = `Feed logged · ${event.volumeMl} ml`
+        break
+      case 'nappy':
+        text = `${event.nappyType} nappy logged`
+        break
+      case 'weight':
+        text = 'Weight logged'
+        break
+      case 'sleep':
+        text = event.endedAt == null ? 'Sleep started' : 'Sleep logged'
+        break
+      case 'dose':
+        text = 'Meds logged'
+        break
+    }
     setToast({ type: event.type, text })
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), 2600)
+  }
+
+  async function handleStopSleep() {
+    if (runningSleep?.id) await stopSleep(runningSleep.id, new Date().toISOString())
   }
 
   return (
@@ -63,10 +86,18 @@ export default function HomePage() {
           { type: 'feed', count: counts.feed, label: 'feeds' },
           { type: 'nappy', count: counts.nappy, label: 'changes' },
           { type: 'dose', count: counts.dose, label: 'meds' },
+          { type: 'sleep', count: 0, value: sleepToday, label: 'sleep' },
         ]}
       />
 
       <div className="flex flex-col gap-6 px-5 pb-6 pt-1.5">
+        {runningSleep && (
+          <RunningSleepBanner
+            sleep={runningSleep}
+            onOpen={() => setEditing(runningSleep)}
+            onStop={handleStopSleep}
+          />
+        )}
         <Clock events={events} now={now} centerTime={center.time} centerAmpm={center.ampm} hint={hint} />
         <LogButtons onPick={setAdding} />
 
@@ -90,6 +121,7 @@ export default function HomePage() {
         editing={editing}
         medications={medications}
         lastFeed={lastFeed}
+        hasRunningSleep={runningSleep != null}
         onSaved={showToast}
         onClose={() => {
           setAdding(null)

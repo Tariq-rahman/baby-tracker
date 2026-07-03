@@ -14,7 +14,10 @@ import {
   updateMedication,
   deleteMedication,
   importAll,
+  startSleep,
+  stopSleep,
 } from './storage'
+import type { SleepEvent } from './schema'
 
 const feed = {
   type: 'feed' as const,
@@ -86,6 +89,22 @@ describe('storage', () => {
     expect(pending).toEqual([
       expect.objectContaining({ table: 'events', uid: row!.uid }),
     ])
+  })
+
+  it('startSleep creates an open sleep row (endedAt null); stopSleep sets its end', async () => {
+    const start = '2026-06-09T13:00:00.000Z'
+    const id = await startSleep(start)
+
+    const open = (await db.events.get(id)) as SleepEvent
+    expect(open.type).toBe('sleep')
+    expect(open.occurredAt).toBe(start)
+    expect(open.endedAt).toBeNull()
+
+    const end = '2026-06-09T14:30:00.000Z'
+    await stopSleep(id, end)
+    const stopped = (await db.events.get(id)) as SleepEvent
+    expect(stopped.endedAt).toBe(end)
+    expect((await db._pending.toArray()).length).toBeGreaterThan(0) // start + stop both queued
   })
 
   it('saves the singleton baby, stamps a uid, and preserves it across saves', async () => {

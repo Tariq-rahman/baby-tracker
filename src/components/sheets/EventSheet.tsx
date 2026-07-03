@@ -4,18 +4,29 @@ import BottleSheet from './BottleSheet'
 import NappySheet from './NappySheet'
 import DoseSheet from './DoseSheet'
 import WeightSheet from './WeightSheet'
+import SleepSheet from './SleepSheet'
 
 interface Props {
-  adding: 'bottle' | 'nappy' | 'dose' | 'weight' | null
+  adding: 'bottle' | 'nappy' | 'dose' | 'weight' | 'sleep' | null
   editing: BabyEvent | null
   medications: Medication[]
   /** Most recent feed — used to prefill a new feed sheet. */
   lastFeed?: FeedEvent
+  /** True when a sleep is already open — hides "Start sleep now" in the sleep sheet. */
+  hasRunningSleep?: boolean
   onClose: () => void
   onSaved?: (event: BabyEvent) => void
 }
 
-export default function EventSheet({ adding, editing, medications, lastFeed, onClose, onSaved }: Props) {
+export default function EventSheet({
+  adding,
+  editing,
+  medications,
+  lastFeed,
+  hasRunningSleep,
+  onClose,
+  onSaved,
+}: Props) {
   if (!adding && !editing) return null
 
   async function handleSave(event: BabyEvent) {
@@ -73,6 +84,15 @@ export default function EventSheet({ adding, editing, medications, lastFeed, onC
         {kind === 'weight' && (
           <WeightSheet
             initial={editing?.type === 'weight' ? editing : undefined}
+            onSave={handleSave}
+            onDelete={editing ? handleDelete : undefined}
+            onClose={onClose}
+          />
+        )}
+        {kind === 'sleep' && (
+          <SleepSheet
+            initial={editing?.type === 'sleep' ? editing : undefined}
+            hasRunning={hasRunningSleep}
             onSave={handleSave}
             onDelete={editing ? handleDelete : undefined}
             onClose={onClose}

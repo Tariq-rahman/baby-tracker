@@ -22,6 +22,7 @@ export const eventColor: Record<EventType, string> = {
   nappy: '#DD7E68',
   dose: '#C25A40',
   weight: '#7C9885',
+  sleep: '#8C7BA0', // mauve — calm, night-ish; matches the AM band wash
 }
 
 /** Short human label per event type. */
@@ -30,4 +31,5 @@ export const eventLabel: Record<EventType, string> = {
   nappy: 'Nappy',
   dose: 'Meds',
   weight: 'Weight',
+  sleep: 'Sleep',
 }

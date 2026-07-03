@@ -1,13 +1,14 @@
 import { eventColor, eventLabel } from '../lib/theme'
 import { EventIcon } from './icons'
 
-export type LogKind = 'bottle' | 'nappy' | 'dose'
+export type LogKind = 'bottle' | 'nappy' | 'dose' | 'sleep'
 
 // The kind passed to EventSheet maps to an event type for icon/colour/label.
-const KINDS: { kind: LogKind; type: 'feed' | 'nappy' | 'dose' }[] = [
+const KINDS: { kind: LogKind; type: 'feed' | 'nappy' | 'dose' | 'sleep' }[] = [
   { kind: 'bottle', type: 'feed' },
   { kind: 'nappy', type: 'nappy' },
   { kind: 'dose', type: 'dose' },
+  { kind: 'sleep', type: 'sleep' },
 ]
 
 /** Solid, circular ("radial") log buttons, one per core event type. */

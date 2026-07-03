@@ -18,6 +18,7 @@ export default {
         nappy: '#DD7E68',
         meds: '#C25A40',
         weight: '#7C9885', // sage — distinct, signals growth (not in the 3-up mockup)
+        sleep: '#8C7BA0', // mauve — calm night tone for sleep arcs / button
       },
       fontFamily: {
         sans: ['"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],

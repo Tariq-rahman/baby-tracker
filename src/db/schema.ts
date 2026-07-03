@@ -1,6 +1,6 @@
 import Dexie, { type Table, type Transaction } from 'dexie'
 
-export type EventType = 'feed' | 'nappy' | 'weight' | 'dose'
+export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep'
 export type FeedContent = 'formula' | 'breastmilk'
 export type NappyType = 'wet' | 'dirty' | 'both'
 export type NappySize = 'small' | 'medium' | 'large'
@@ -66,7 +66,18 @@ export interface DoseEvent extends BaseEvent {
   medicationId: number
   doseAmount: number
 }
-export type BabyEvent = FeedEvent | NappyEvent | WeightEvent | DoseEvent
+/**
+ * A Sleep spans an interval, unlike every other (instant) event. `occurredAt` is
+ * the start; `endedAt` is the end, or `null` while the sleep is still running.
+ * A running sleep is a real synced row (not local-only), so both caregivers see
+ * "sleep in progress"; stopping it is a single update that sets `endedAt`.
+ * See docs/adr/0003-sleep-as-duration-event.md.
+ */
+export interface SleepEvent extends BaseEvent {
+  type: 'sleep'
+  endedAt: string | null // ISO datetime; null ⇒ in progress
+}
+export type BabyEvent = FeedEvent | NappyEvent | WeightEvent | DoseEvent | SleepEvent
 
 /** Outbox: a record awaiting push. Compound key `[table+uid]` dedupes re-queues. */
 export interface PendingRef {
