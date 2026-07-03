@@ -87,8 +87,21 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm 
     )
   })
 
+  // Markers only plot today's events, up to now — matching the day the counts and
+  // event list use. Without a window every event ever logged folds onto the 12h
+  // face, so events from other days show at positions past the now-hand. A calendar
+  // day maps exactly onto the dial (AM inner + PM outer = one full day), so there is
+  // no folding ambiguity within it.
+  const onNowDay = (d: Date) =>
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
   const markers = events
     .filter((ev) => PLOTTED.has(ev.type))
+    .filter((ev) => {
+      const date = new Date(ev.occurredAt)
+      return onNowDay(date) && date.getTime() <= now.getTime()
+    })
     .map((ev, idx) => {
       const date = new Date(ev.occurredAt)
       const deg = eventAngle(date)
