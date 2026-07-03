@@ -11,6 +11,8 @@ export default {
         inkSoft: '#9A8979', // secondary text
         ring: '#C8674F', // dial ring / accents
         faint: '#DCCBB8', // borders / hairlines
+        day: '#F5D4A0', // warm wash behind the PM (outer) clock track
+        night: '#BEB0C8', // cool wash behind the AM (inner) clock track
         // per-event-type accents
         feed: '#E29A3C',
         nappy: '#DD7E68',

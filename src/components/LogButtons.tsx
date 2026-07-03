@@ -1,5 +1,5 @@
 import { eventColor, eventLabel } from '../lib/theme'
-import { EventIcon, PlusIcon } from './icons'
+import { EventIcon } from './icons'
 
 export type LogKind = 'bottle' | 'nappy' | 'dose'
 
@@ -10,31 +10,25 @@ const KINDS: { kind: LogKind; type: 'feed' | 'nappy' | 'dose' }[] = [
   { kind: 'dose', type: 'dose' },
 ]
 
-/** Three big "soft" log buttons, one per core event type. */
+/** Solid, circular ("radial") log buttons, one per core event type. */
 export default function LogButtons({ onPick }: { onPick: (kind: LogKind) => void }) {
   return (
-    <div className="flex gap-3">
+    <div className="flex flex-wrap justify-center gap-6">
       {KINDS.map(({ kind, type }) => {
         const col = eventColor[type]
         return (
-          <button
-            key={kind}
-            type="button"
-            onClick={() => onPick(kind)}
-            className="press flex flex-1 flex-col items-center justify-center gap-1.5 rounded-3xl px-2 pb-4 pt-5"
-            style={{ background: `${col}1f`, boxShadow: '0 6px 16px #3A2E270a' }}
-          >
-            <span
-              className="flex h-11 w-11 items-center justify-center rounded-full"
-              style={{ background: `${col}24` }}
+          <div key={kind} className="flex flex-col items-center gap-2">
+            <button
+              type="button"
+              onClick={() => onPick(kind)}
+              aria-label={`Log ${eventLabel[type]}`}
+              className="press flex h-[70px] w-[70px] items-center justify-center rounded-full"
+              style={{ background: col, boxShadow: `0 8px 20px ${col}55` }}
             >
-              <EventIcon type={type} size={24} color={col} sw={2} />
-            </span>
-            <span className="text-[15px] font-bold text-ink">{eventLabel[type]}</span>
-            <span className="flex items-center gap-0.5 text-[11px] font-semibold" style={{ color: col }}>
-              <PlusIcon size={11} color={col} sw={2.6} /> log
-            </span>
-          </button>
+              <EventIcon type={type} size={28} color="#fff" sw={1.9} />
+            </button>
+            <span className="text-[12.5px] font-semibold text-ink">{eventLabel[type]}</span>
+          </div>
         )
       })}
     </div>
