@@ -147,9 +147,9 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
           pointerEvents: 'none',
         }}
       >
-        <div className="tnum font-bold leading-none text-ink" style={{ fontSize: 38, letterSpacing: '-0.02em' }}>
+        <div className="tnum font-bold leading-none text-ink" style={{ fontSize: 28, letterSpacing: '-0.02em' }}>
           {centerTime}
-          <span className="font-semibold text-inkSoft" style={{ fontSize: 15, marginLeft: 3 }}>
+          <span className="font-semibold text-inkSoft" style={{ fontSize: 13, marginLeft: 2 }}>
             {centerAmpm}
           </span>
         </div>
