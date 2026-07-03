@@ -1,6 +1,7 @@
 import type { BabyEvent, Medication } from '../db/schema'
 import { eventColor, eventLabel } from '../lib/theme'
 import { fmtClock, relativeTime } from '../lib/format'
+import { formatSleepDuration } from '../lib/stats'
 import { gramsToKg } from '../lib/units'
 import { EventIcon } from './icons'
 
@@ -24,6 +25,9 @@ function describeEvent(e: BabyEvent, medications: Medication[] = []): string {
       const med = medications.find((m) => m.id === e.medicationId)
       return med ? `${med.name} · ${e.doseAmount} ${med.unit}` : `Dose · ${e.doseAmount}`
     }
+    case 'sleep':
+      if (e.endedAt == null) return 'in progress'
+      return `${formatSleepDuration((Date.parse(e.endedAt) - Date.parse(e.occurredAt)) / 60000)} sleep`
   }
 }
 

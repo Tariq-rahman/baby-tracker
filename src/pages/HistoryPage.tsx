@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useEvents, useMedications } from '../hooks/useEvents'
-import { listEventsForDay } from '../lib/stats'
+import { listEventsForDay, sleepMinutesForDay, formatSleepDuration } from '../lib/stats'
 import { palette } from '../lib/theme'
 import EventList from '../components/EventList'
 import StatStrip from '../components/StatStrip'
@@ -70,6 +70,7 @@ export default function HistoryPage() {
             { type: 'feed', count: counts.feed, label: 'feeds' },
             { type: 'nappy', count: counts.nappy, label: 'changes' },
             { type: 'dose', count: counts.dose, label: 'meds' },
+            { type: 'sleep', count: 0, value: formatSleepDuration(sleepMinutesForDay(events, day, now)), label: 'sleep' },
           ]}
         />
       </div>

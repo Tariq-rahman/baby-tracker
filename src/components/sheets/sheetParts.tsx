@@ -68,10 +68,18 @@ export function Chip({
   )
 }
 
-export function TimeField({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+export function TimeField({
+  value,
+  onChange,
+  label = 'Time',
+}: {
+  value: string
+  onChange: (v: string) => void
+  label?: string
+}) {
   return (
     <label className="mb-4 block">
-      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-inkSoft">Time</span>
+      <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-inkSoft">{label}</span>
       <input
         type="datetime-local"
         value={value}

@@ -185,6 +185,32 @@ describe('eventToRow (payload packing)', () => {
       },
       wantPayload: { medicationUid: null, doseAmount: 1 },
     },
+    {
+      name: 'running sleep packs endedAt null',
+      event: {
+        type: 'sleep',
+        uid: 'e6',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        endedAt: null,
+      },
+      wantPayload: { endedAt: null },
+    },
+    {
+      name: 'finished sleep packs its end',
+      event: {
+        type: 'sleep',
+        uid: 'e7',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        endedAt: T_ISO,
+      },
+      wantPayload: { endedAt: T_ISO },
+    },
   ]
 
   for (const c of cases) {
@@ -249,6 +275,26 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       deletedAt: null,
       medicationId: 5,
       doseAmount: 2.5,
+    },
+    {
+      type: 'sleep',
+      uid: 'e6',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      endedAt: null,
+    },
+    {
+      type: 'sleep',
+      uid: 'e7',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      endedAt: T_ISO,
     },
   ]
 

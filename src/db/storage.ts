@@ -111,6 +111,21 @@ export async function deleteEvent(id: number): Promise<void> {
   })
 }
 
+// --- Sleep (a duration event: start now, stop later) ---
+/** Begin a running sleep — a synced row with `endedAt: null` (visible to all caregivers). */
+export async function startSleep(occurredAt: string): Promise<number> {
+  return addEvent({
+    type: 'sleep',
+    occurredAt,
+    endedAt: null,
+    createdAt: new Date().toISOString(),
+  })
+}
+/** Stop a running sleep by setting its end. Editing a running sleep's end IS the stop. */
+export async function stopSleep(id: number, endedAt: string): Promise<void> {
+  await updateEvent(id, { endedAt })
+}
+
 // --- Backup ---
 export async function exportAll() {
   return {

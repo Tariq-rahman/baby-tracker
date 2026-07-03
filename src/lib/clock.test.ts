@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { polar, eventAngle, bandRadius } from './clock'
+import { polar, eventAngle, bandRadius, sleepArcSegments } from './clock'
 
 describe('eventAngle', () => {
   it.each([
@@ -26,6 +26,77 @@ describe('bandRadius', () => {
     ['2026-06-09T23:00:00.000Z', outerR], // late evening -> PM outer
   ])('puts %s on radius %s', (iso, want) => {
     expect(bandRadius(new Date(iso), innerR, outerR)).toBe(want)
+  })
+})
+
+describe('sleepArcSegments', () => {
+  // Tests run under TZ=UTC (see repo test setup), so the Z hour == local getHours().
+  const d = (iso: string) => new Date(iso)
+
+  it('same-band afternoon nap → one PM segment', () => {
+    const segs = sleepArcSegments(
+      d('2026-06-09T13:00:00Z'),
+      d('2026-06-09T14:00:00Z'),
+      d('2026-06-09T15:00:00Z'),
+    )
+    expect(segs).toEqual([{ track: 'pm', deg1: 30, deg2: 60 }])
+  })
+
+  it('crossing noon → an AM piece to 360 and a PM piece from 0', () => {
+    const segs = sleepArcSegments(
+      d('2026-06-09T10:00:00Z'),
+      d('2026-06-09T14:00:00Z'),
+      d('2026-06-09T15:00:00Z'),
+    )
+    expect(segs).toEqual([
+      { track: 'am', deg1: 300, deg2: 360 },
+      { track: 'pm', deg1: 0, deg2: 60 },
+    ])
+  })
+
+  it('overnight sleep splits into evening (PM/outer) then morning (AM/inner)', () => {
+    const segs = sleepArcSegments(
+      d('2026-06-09T22:00:00Z'),
+      d('2026-06-10T07:00:00Z'),
+      d('2026-06-10T08:00:00Z'),
+    )
+    expect(segs).toEqual([
+      { track: 'pm', deg1: 300, deg2: 360 },
+      { track: 'am', deg1: 0, deg2: 210 },
+    ])
+  })
+
+  it('running sleep uses end = now', () => {
+    const segs = sleepArcSegments(
+      d('2026-06-09T13:00:00Z'),
+      d('2026-06-09T15:00:00Z'), // end passed as now for a running sleep
+      d('2026-06-09T15:00:00Z'),
+    )
+    expect(segs).toEqual([{ track: 'pm', deg1: 30, deg2: 90 }])
+  })
+
+  it('clips to the 24h window and never exceeds a full band (360°)', () => {
+    // 24h sleep, only the last 24h is visible → start pulled to now−24h (07:00).
+    const segs = sleepArcSegments(
+      d('2026-06-09T06:00:00Z'),
+      d('2026-06-10T06:00:00Z'),
+      d('2026-06-10T07:00:00Z'),
+    )
+    expect(segs).toEqual([
+      { track: 'am', deg1: 210, deg2: 360 },
+      { track: 'pm', deg1: 0, deg2: 360 },
+      { track: 'am', deg1: 0, deg2: 180 },
+    ])
+    for (const s of segs) expect(s.deg2).toBeLessThanOrEqual(360)
+  })
+
+  it('returns [] for a sleep entirely before the window', () => {
+    const segs = sleepArcSegments(
+      d('2026-06-08T02:00:00Z'), // ~30h before now
+      d('2026-06-08T06:00:00Z'), // ~26h before now
+      d('2026-06-09T08:00:00Z'),
+    )
+    expect(segs).toEqual([])
   })
 })
 

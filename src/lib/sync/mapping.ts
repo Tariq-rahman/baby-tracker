@@ -150,6 +150,8 @@ function packPayload(e: BabyEvent, ctx: EventToRowCtx): Record<string, unknown> 
         medicationUid: ctx.medUidByLocalId.get(e.medicationId) ?? null,
         doseAmount: e.doseAmount,
       }
+    case 'sleep':
+      return { endedAt: e.endedAt }
   }
 }
 
@@ -209,5 +211,7 @@ export function eventFromRow(r: EventRow, ctx: EventFromRowCtx): WithoutId<BabyE
           p.medicationUid != null ? (ctx.medLocalIdByUid.get(p.medicationUid as string) ?? 0) : 0,
         doseAmount: Number(p.doseAmount),
       }
+    case 'sleep':
+      return { ...base, type: 'sleep', endedAt: (p.endedAt as string | null) ?? null }
   }
 }

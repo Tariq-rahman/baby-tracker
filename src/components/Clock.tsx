@@ -3,8 +3,9 @@
 // wash and a cool night wash make the AM/PM split legible at a glance, and the
 // now-hand rides whichever band the current time falls on. Weight is tracked on
 // its own page, so only feed / nappy / dose are plotted here.
-import type { BabyEvent } from '../db/schema'
-import { polar, eventAngle, bandRadius } from '../lib/clock'
+import type { BabyEvent, SleepEvent } from '../db/schema'
+import { polar, eventAngle, bandRadius, arcPath, sleepArcSegments } from '../lib/clock'
+import { getRunningSleep } from '../lib/stats'
 import { palette, eventColor } from '../lib/theme'
 
 interface Props {
@@ -27,6 +28,27 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
 
   const nowDeg = eventAngle(now)
   const handTip = polar(cx, cy, bandRadius(now, innerR, outerR) + 8, nowDeg)
+
+  // Sleep arcs: each sleep (running → end = now) becomes per-band segments,
+  // windowed to the last 24h. The running sleep gets a pulsing tip at its leading edge.
+  const runningSleep = getRunningSleep(events)
+  const sleepCol = eventColor.sleep
+  const trackR = (track: 'am' | 'pm') => (track === 'pm' ? outerR : innerR)
+  const arcs = events
+    .filter((e): e is SleepEvent => e.type === 'sleep')
+    .flatMap((s) => {
+      const start = new Date(s.occurredAt)
+      const end = s.endedAt != null ? new Date(s.endedAt) : now
+      const running = s.endedAt == null && s.id === runningSleep?.id
+      return sleepArcSegments(start, end, now).map((seg, i) => ({
+        key: `${s.id}-${i}`,
+        r: trackR(seg.track),
+        d: arcPath(cx, cy, trackR(seg.track), seg.deg1, seg.deg2),
+        tip: running ? polar(cx, cy, trackR(seg.track), seg.deg2) : null,
+      }))
+    })
+  // Only the last segment of a running sleep carries the live tip.
+  const lastRunningTipKey = [...arcs].reverse().find((a) => a.tip)?.key
 
   const ticks = []
   for (let i = 0; i < 12; i++) {
@@ -116,6 +138,18 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm,
           strokeDasharray="2 5"
           strokeLinecap="round"
         />
+
+        {/* sleep arcs — a faint underlay + a solid stroke, on the AM/PM track radius */}
+        {arcs.map((a) => (
+          <g key={a.key}>
+            <path d={a.d} fill="none" stroke={sleepCol} strokeWidth={9} strokeLinecap="round" opacity={0.18} />
+            <path d={a.d} fill="none" stroke={sleepCol} strokeWidth={4.5} strokeLinecap="round" opacity={0.85} />
+            {a.tip && a.key === lastRunningTipKey && (
+              <circle className="livepulse" cx={a.tip.x} cy={a.tip.y} r={5} fill={sleepCol} />
+            )}
+          </g>
+        ))}
+
         {ticks}
         {nums}
         <g style={{ transformOrigin: `${cx}px ${cy}px`, animation: 'sweep .7s cubic-bezier(.22,.9,.27,1) both' }}>

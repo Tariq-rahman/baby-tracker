@@ -14,9 +14,13 @@ The unit of sharing and data ownership. A Household owns its babies, medications
 An infant being tracked, configured with a name and date of birth. In practice there is usually **one baby per household**; events do not name the baby. Multiple babies (twins, future children) are supported by the data model — a Household can own several — but the UI is optimised for one.
 
 ### Event
-A single timestamped thing the caregiver records about the baby. Every Event has a type and a time at which it occurred. The MVP supports four event types: **Feed**, **Nappy**, **Weight**, and **Medication**.
+A single thing the caregiver records about the baby. Every Event has a type. Most events happen at a single instant (a time at which they occurred); **Sleep** is the exception — it spans an interval (start → end). The supported event types are **Feed**, **Nappy**, **Weight**, **Medication** (as a Dose), and **Sleep**.
 
-Deferred event types (documented, not built for MVP): Sleep, Pumping, free-text Note, height/other growth measurements.
+Deferred event types (documented, not built): Pumping, free-text Note, height/other growth measurements.
+
+### Sleep
+An Event recording a stretch of the baby sleeping — a daytime nap or the long overnight sleep, tracked the same way. Unlike other Events it is a **duration**: it has a start time and an end time. A Sleep with no end yet is **in progress** (running) and drives the live timer and the pulsating arc on the clock. At most **one Sleep is in progress at a time** (enforced in the UI). A Sleep left running beyond ~18 hours is assumed forgotten: it is flagged as needing attention and excluded from sleep totals until an end time is set.
+_Avoid_: Nap (a nap is one daytime instance of Sleep; the feature and its button are called "Sleep"), Doze.
 
 ### Feed
 An Event recording the baby being fed. **MVP scope: bottle feeds only**, capturing volume in millilitres plus an optional content type (formula / expressed breast milk). Deferred (documented): breast feeds (side + duration) and solids (food + amount).

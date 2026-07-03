@@ -77,6 +77,11 @@ export function ScaleIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconP
   )
 }
 
+export function MoonIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
+  // crescent moon for sleep
+  return svg(size, color, sw, <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />)
+}
+
 export function PlusIcon({ size = 24, color = 'currentColor', sw = 2.2 }: IconProps) {
   return svg(size, color, sw, <path d="M12 5v14M5 12h14" />)
 }
@@ -139,5 +144,6 @@ export function EventIcon({
   if (type === 'feed') return <BottleIcon size={size} color={color} sw={sw} />
   if (type === 'nappy') return <NappyIcon size={size} color={color} sw={sw} />
   if (type === 'weight') return <ScaleIcon size={size} color={color} sw={sw} />
+  if (type === 'sleep') return <MoonIcon size={size} color={color} sw={sw} />
   return <PillIcon size={size} color={color} sw={sw} />
 }

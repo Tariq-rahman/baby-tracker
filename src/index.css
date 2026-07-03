@@ -112,3 +112,24 @@
     transform: rotate(0);
   }
 }
+
+/* pulsing tip at the leading edge of a running sleep arc */
+@keyframes livepulse {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.55);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+.livepulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: livepulse 1.6s ease-in-out infinite;
+}
