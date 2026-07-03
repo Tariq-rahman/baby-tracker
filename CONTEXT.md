@@ -5,10 +5,13 @@ A glossary of the core domain language for this project. Implementation details 
 ## Glossary
 
 ### Caregiver
-A person who logs and views events for a baby. **MVP scope: a single caregiver on a single device.** Multi-caregiver shared/synced data is a deliberate post-MVP concern.
+A person who logs and views events for a baby. A caregiver belongs to one or more households and, once signed in, sees the same data on every device. Two caregivers can share a baby by joining the same Household (see below).
+
+### Household
+The unit of sharing and data ownership. A Household owns its babies, medications, and events, and has one or more caregivers as members. A caregiver creates a Household on first sign-in and can invite another caregiver to it by code; accepting the invite adds them as a member and syncs the shared data to their device. All server-side access is scoped to Household membership.
 
 ### Baby
-The single infant being tracked. **MVP scope: exactly one baby**, configured once (name, date of birth) in settings. Events do not need to name the baby — there is only one. Multiple babies (twins, future children) is deferred.
+An infant being tracked, configured with a name and date of birth. In practice there is usually **one baby per household**; events do not name the baby. Multiple babies (twins, future children) are supported by the data model — a Household can own several — but the UI is optimised for one.
 
 ### Event
 A single timestamped thing the caregiver records about the baby. Every Event has a type and a time at which it occurred. The MVP supports four event types: **Feed**, **Nappy**, **Weight**, and **Medication**.
@@ -29,3 +32,9 @@ A medication or supplement the caregiver has **defined once** for reuse — name
 
 ### Dose
 An Event recording that a defined Medication was given to the baby at a particular time. Fields: time, the Medication given, and dose amount (defaults to the Medication's default dose, editable per dose). A Dose always references an existing Medication.
+
+### Reminder
+An opt-in nudge to a caregiver that it has been a while since the last Feed. A caregiver turns reminders on and picks an interval (e.g. "3 hours since the last bottle"). Reminders are computed and sent from the cloud off the household's latest non-deleted Feed, so they arrive even with the app closed and require no client-side timer or re-arming. Deleting the latest Feed recomputes the reminder off the previous one.
+
+### Push Subscription
+The server-side record that lets a Reminder reach a specific device — the browser's Web Push endpoint plus the caregiver's chosen interval and whether reminders are enabled. Created when a caregiver turns reminders on (granting notification permission) and removed when they turn them off or the browser drops the subscription. One device = one Push Subscription.

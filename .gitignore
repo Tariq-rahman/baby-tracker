@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Ephemeral session working state (see the `resume` skill)
+progress.md
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
