@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 15:10 · Branch: main @ 2c2bb86 · Task 1.3 MERGED (PR #16), user deploying to verify live; Task 1.4 next_
+_Updated: 2026-07-05 15:45 · Branch: main (local checkpoint unpushed) · Task 1.3 + fix MERGED & VERIFIED live (PRs #16, #17); Task 1.4 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.3 (first reflective insights) is DONE and MERGED to `main`** (PR #16, merge `2c2bb86`). Working tree clean, on `main`. Full gate was green: `npm run build`, `eslint`, **236 tests** (+21 new). The Trends **feed** card's `insight` slot renders real reflective insights (bottle-volume vs baseline, breast-nursing vs baseline, confidence-gated next-feed prediction), replacing the placeholder avg text. User is deploying to Vercel to verify on the live version. Next is Task 1.4 (dark mode) on a fresh branch off `main`.
+**H1 Task 1.3 (first reflective insights) is DONE, MERGED and VERIFIED live** (PR #16 + fix PR #17, merge `1aeb4d3`). Working tree clean, on `main`. Full gate green: `npm run build`, `eslint`, **246 tests**. The Trends **feed** card renders honest reflective insights against real data — user confirmed the fix works on the live Vercel deploy. Next is Task 1.4 (dark mode) on a fresh branch off `main`.
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -24,17 +24,21 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - Each self-gates: **silent** if method unused, **"keep logging"** (insufficient-data) if used-but-sparse, **comparative fact** once gate (3d + 5 events / 7d window) met.
   - New baseline helpers: `localDay`, `todaySum`, `compareDirection` (±tol band → only `below`/`above`/`about the same as`).
   - `InsightList.tsx` renders facts into the feed `TrendCard` slot (muted for insufficient-data, 🕐 for prediction). +21 tests, suite 236.
+- **H1 Task 1.3 fix — honest insights against live data** — MERGED (PR #17, merge `1aeb4d3`, fix `65dcc6b`). Live data exposed two bugs, both fixed:
+  - **Baseline understated by phantom days.** `dailyBaseline` divided by `windowDays` (7) unconditionally, so pre-tracking days counted as `0` and dragged the mean down (showed "236 ml/day"). Now `completeDayBaseline` + `assessCompleteCoverage` **withhold the comparison until the first feed of that method is a full window old** (`hasFullHistory`); until then the muted "keep logging" state shows.
+  - **Compared an in-progress day.** Was `todaySum` vs baseline → a partial day always read "below". Now compares **yesterday** (`lastCompleteDay` + `daySum`) vs a baseline over **complete days only** (today excluded from both). Copy: "Yesterday's bottles (X ml) were …".
+  - `FeedInsightConfig.gate` → `minEvents` (full-window history is the binding gate). +10 tests, suite 246.
 
 ## Next
-1. **User is verifying Task 1.3 on the live Vercel deploy.** If insights look off against real data, fix on a new branch. Otherwise proceed.
-2. **H1 Task 1.4 — Dark mode** (see plan §"Task 1.4"). Fresh branch off `main`.
+1. **H1 Task 1.4 — Dark mode** (see plan §"Task 1.4"). Fresh branch off `main`.
 3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
 - **Task 1.3 gating decision:** a strategy returns `[]` (silent) when its method has *zero* events, vs `insufficient-data` ("keep logging") when the method is used but below the sufficiency gate. So a bottle-only family never sees an empty "not enough nursing data" line. Distinction: empty = "you don't do this"; insufficient-data = "you do this, not enough history yet".
 - **Task 1.3 baseline window is fixed 7d** (`DEFAULT_FEED_CONFIG`), independent of the Trends page's 7d/30d/All chart selector — the baseline is the baby's own recent normal (ADR-0006), not the viewed range.
 - **Task 1.3 copy safety:** `compareDirection` only ever emits `below`/`above`/`about the same as`; a test asserts facts never contain `enough`/`normal`/`should`/`ok` (ADR-0005). Copy is authored in the strategies, never in `InsightList`.
-- **Task 1.3 today-vs-baseline both keyed by `occurredAt`'s local day** (`todaySum` + `dailyBaseline`), so a midnight-spanning nursing session is attributed to its start day consistently on both sides (no per-day clipping like `nursingMinutesForDay`). Prediction counts feeds of *either* method (matches client `getLastEventOfType`).
+- **Task 1.3 compares YESTERDAY, not today** (fixed in #17): today is in-progress, so a partial day vs a daily average always reads "below". `completeDayBaseline` averages complete days only (today excluded); `daySum(lastCompleteDay(now))` is the comparison target. Both sides key on `occurredAt`'s local day (midnight-spanning session attributed to its start day). Prediction counts feeds of *either* method (matches client `getLastEventOfType`).
+- **Task 1.3 gate is "a full week of real history", not N distinct days** (fixed in #17): `dailyBaseline` divides by `windowDays` unconditionally, so pre-tracking days are phantom `0`s. `assessCompleteCoverage.hasFullHistory` (first-ever feed of the method ≤ window start) is the binding gate; `minEvents` only guards degenerate cases. #1 gotcha: any "average over a fixed window" that divides by the window length is wrong until history fills the window.
 - **Task 1.2 nav decision:** replaced the bottom-nav "Weight" tab with "Trends" (chose the recommended option; user was away for the AskUserQuestion). `/weight` route is *kept* (not in the tab bar) — reached by tapping the Trends weight card; WeightPage gained a "← Trends" back link. All weight CRUD stays on `/weight` (didn't cram it into a card).
 - **Task 1.2 scope decision:** built page+cards+window+baseline only; deferred real insight strategies to 1.3 (recommended option). `TrendCard` has an `insight?: ReactNode` slot ready to fill.
 - **Trends aggregation reuses the audited single-day helpers** (`getDailyTotals`/`sleepMinutesForDay`/`nursingMinutesForDay`) per day — so breast feeds count toward frequency without their absent volume being read, and duration events clip per day. `src/lib/trends.ts` is pure + fully tested (13 tests); the UI just maps its output into Recharts `BarChart`s.
