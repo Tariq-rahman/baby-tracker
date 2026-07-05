@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 17:40 · Branch: feat/settings-sections (37a4fdb) · Task 1.5 Settings restructure DONE, PR #19 OPEN; DX phase planned; next = DX.1 (or Task 1.6)_
+_Updated: 2026-07-05 17:45 · Branch: main (4e4a25b) · Task 1.5 Settings restructure MERGED (PR #19); DX phase planned; next = DX.1 (or Task 1.6)_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). A cross-cutting **DX phase** (developer experience / testability) was added 2026-07-05.
 
 ## Status
-**H1 Task 1.5 (Settings restructure) is DONE — PR #19 OPEN** ([#19](https://github.com/Tariq-rahman/baby-tracker/pull/19), branch `feat/settings-sections`, commit `37a4fdb`). Gate green: `npm run build`, `npx eslint src/` clean, **264 tests**. Pure restructure of `SettingsPage.tsx` into six labelled sections (Baby & Household · Tracking · Notifications · Appearance · Data · Account). ⚠️ **Not visually verified** — no browser automation in this env; needs eyeballing on the deploy preview (this is exactly what the new DX.1 fixes).
+**H1 Task 1.5 (Settings restructure) is DONE & MERGED** ([PR #19](https://github.com/Tariq-rahman/baby-tracker/pull/19), merge `d4cf61f`, feature `37a4fdb`). Gate green: `npm run build`, `npx eslint src/` clean, **264 tests**. Pure restructure of `SettingsPage.tsx` into six labelled sections (Baby & Household · Tracking · Notifications · Appearance · Data · Account). ⚠️ **Not visually verified** — no browser automation in this env; needs eyeballing on the deploy (this is exactly what the new DX.1 fixes).
 Also this session: **grilled + planned the DX phase** (browser automation for AI visual checks, seeded data, login bypass, staging) — see the plan + roadmap. No DX code written yet.
 (Task 1.4 dark mode: DONE, MERGED, VERIFIED live — PR #18, `54785c3`.)
 
