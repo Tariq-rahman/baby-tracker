@@ -43,7 +43,9 @@ function startDevServer() {
     }, 30_000)
 
     const onData = (buf) => {
-      const text = buf.toString()
+      // vite v8 emits ANSI colour codes even over a pipe; strip them so the
+      // "Local:  http://…" line matches regardless of inline escape sequences.
+      const text = buf.toString().replace(/\x1b\[[0-9;]*m/g, '')
       const match = text.match(/Local:\s+(http:\/\/\S+)/)
       if (match) {
         clearTimeout(timer)

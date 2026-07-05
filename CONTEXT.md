@@ -14,11 +14,13 @@ The unit of sharing and data ownership. A Household owns its babies, medications
 An infant being tracked, configured with a name and date of birth. In practice there is usually **one baby per household**; events do not name the baby. Multiple babies (twins, future children) are supported by the data model — a Household can own several — but the UI is optimised for one.
 
 ### Event
-A single thing the caregiver records about the baby. Every Event has a type. Most events happen at a single instant (a time at which they occurred); **Sleep** is the exception — it spans an interval (start → end). The supported event types are **Feed**, **Nappy**, **Weight**, **Medication** (as a Dose), **Sleep**, and **Growth**.
+A single thing the caregiver records about the baby. Every Event has a type. Most events happen at a single instant (a time at which they occurred); **Sleep** is the exception — it spans an interval (start → end). The supported event types are **Feed**, **Nappy**, **Weight**, **Medication** (as a Dose), **Sleep**, **Growth**, and **Note**.
 
 **Growth** is a per-measurement type (like Weight, not per-day): one event records optional **height** and/or **head circumference**, each stored as whole millimetres (integer, like Weight's grams). It's opt-in per household — not in the default enabled set — and logged from its own page. See PR #22.
 
-Deferred event types (documented, not built): Pumping, free-text Note.
+**Note** is a deliberately minimal, free-text timestamped observation ("first smile", "seems congested"): a single `text` field, no units, no chart, no Trends card. Unlike Weight/Growth it's a home quick-log type (a log button + sheet, like Feed/Nappy). Opt-in per household — not in the default enabled set.
+
+Deferred event types (documented, not built): Pumping.
 
 ### Duration Event
 An Event that spans an interval (start → end) rather than happening at an instant. **Sleep** and a **Breast** [Feed](#feed) are the duration events. They share behaviour: a start time, an end time, an *in progress* state (`endedAt` null) that drives a live timer, at most **one running at a time** per type, and — for accidental stop-then-restart — a **resume window**: starting a new one within ~5 minutes of the last one ending offers to re-open (continue) the previous Event rather than create a second, shown as an undoable action. Instant events (Feed-Bottle, Nappy, Weight, Dose, Solid) have only an `occurredAt`.

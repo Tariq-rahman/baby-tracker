@@ -90,6 +90,20 @@ export function RulerIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconP
   )
 }
 
+export function NoteIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
+  // sheet of paper with text lines — a free-text note
+  return svg(
+    size,
+    color,
+    sw,
+    <>
+      <path d="M6 3h8l4 4v14H6Z" />
+      <path d="M14 3v4h4" />
+      <path d="M9 12h6M9 15.5h6M9 8.5h2" />
+    </>,
+  )
+}
+
 export function MoonIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
   // crescent moon for sleep
   return svg(size, color, sw, <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />)
@@ -159,5 +173,6 @@ export function EventIcon({
   if (type === 'weight') return <ScaleIcon size={size} color={color} sw={sw} />
   if (type === 'growth') return <RulerIcon size={size} color={color} sw={sw} />
   if (type === 'sleep') return <MoonIcon size={size} color={color} sw={sw} />
+  if (type === 'note') return <NoteIcon size={size} color={color} sw={sw} />
   return <PillIcon size={size} color={color} sw={sw} />
 }
