@@ -12,11 +12,13 @@ import {
 const HOUR = 60 * 60 * 1000
 const MIN = 60 * 1000
 // Tests run under TZ=UTC (see npm test), so local day == UTC day.
+// NOW is midday 2026-07-08 → yesterday is 07-07, the complete 7-day window is
+// [07-01 00:00, 07-08 00:00), and full history requires a feed on/before 07-01.
 const NOW = new Date('2026-07-08T12:00:00.000Z')
 
 const ago = (hours: number): string => new Date(NOW.getTime() - hours * HOUR).toISOString()
 
-/** A bottle feed (absent method ⇒ bottle). */
+/** A bottle feed (absent method ⇒ bottle) at an explicit ISO time. */
 const bottle = (occurredAt: string, volumeMl = 100): BabyEvent => ({
   type: 'feed',
   volumeMl,
@@ -24,61 +26,73 @@ const bottle = (occurredAt: string, volumeMl = 100): BabyEvent => ({
   createdAt: occurredAt,
 })
 
-/** A completed nursing session of `durationMin`, starting `startAgoH` hours ago. */
-const breast = (startAgoH: number, durationMin: number): BabyEvent => {
-  const start = new Date(NOW.getTime() - startAgoH * HOUR)
-  return {
-    type: 'feed',
-    method: 'breast',
-    side: 'left',
-    occurredAt: start.toISOString(),
-    endedAt: new Date(start.getTime() + durationMin * MIN).toISOString(),
-    createdAt: start.toISOString(),
-  }
-}
+/** A completed nursing session of `durationMin`, starting at `start` (ISO). */
+const breast = (start: string, durationMin: number): BabyEvent => ({
+  type: 'feed',
+  method: 'breast',
+  side: 'left',
+  occurredAt: start,
+  endedAt: new Date(Date.parse(start) + durationMin * MIN).toISOString(),
+  createdAt: start,
+})
+
+// A full week of bottle history: first feed on the window start (07-01), five
+// feeds in the complete window, two of them yesterday (07-07) totalling 250 ml.
+const fullWeekBottles: BabyEvent[] = [
+  bottle('2026-07-01T00:00:00.000Z', 100),
+  bottle('2026-07-02T09:00:00.000Z', 100),
+  bottle('2026-07-05T09:00:00.000Z', 100),
+  bottle('2026-07-07T08:00:00.000Z', 120),
+  bottle('2026-07-07T14:00:00.000Z', 130),
+]
 
 describe('bottleVolumeStrategy', () => {
   const strategy = bottleVolumeStrategy()
 
   it('stays silent when the family never bottle-feeds', () => {
-    const events = [breast(1, 20), breast(25, 20), breast(49, 20)]
+    const events = [breast('2026-07-01T00:00:00.000Z', 20), breast('2026-07-05T09:00:00.000Z', 20)]
     expect(strategy.compute({ events, now: NOW })).toEqual([])
   })
 
-  it('withholds a baseline until the sufficiency gate is met', () => {
-    const events = [bottle(ago(1)), bottle(ago(2))] // 1 day, 2 events — below the gate
+  it('withholds a comparison until there is a full week of history', () => {
+    // Five feeds over three recent days, but the first is only ~4 days old.
+    const events = [
+      bottle('2026-07-05T09:00:00.000Z'),
+      bottle('2026-07-05T15:00:00.000Z'),
+      bottle('2026-07-06T09:00:00.000Z'),
+      bottle('2026-07-07T09:00:00.000Z'),
+      bottle('2026-07-07T15:00:00.000Z'),
+    ]
     const insights = strategy.compute({ events, now: NOW })
     expect(insights).toHaveLength(1)
     expect(insights[0].kind).toBe('insufficient-data')
   })
 
-  it('states today vs the baby\'s own baseline once the gate is met', () => {
-    // 5 events over 3 days clears the gate; two 100ml bottles today.
-    const events = [
-      bottle(ago(1), 100),
-      bottle(ago(2), 100),
-      bottle(ago(25), 100),
-      bottle(ago(26), 100),
-      bottle(ago(49), 100),
-    ]
-    const insights = strategy.compute({ events, now: NOW })
+  it('withholds when a full week exists but too few events', () => {
+    const events = [bottle('2026-07-01T00:00:00.000Z'), bottle('2026-07-07T09:00:00.000Z')]
+    expect(strategy.compute({ events, now: NOW })[0].kind).toBe('insufficient-data')
+  })
+
+  it('compares yesterday against the complete-day baseline', () => {
+    const insights = strategy.compute({ events: fullWeekBottles, now: NOW })
     expect(insights).toHaveLength(1)
     expect(insights[0].kind).toBe('comparison')
-    // Today = 200ml; baseline = 500ml / 7d ≈ 71ml/day → today is above.
-    expect(insights[0].fact).toContain("Today's bottles (200 ml)")
+    // Yesterday (07-07) = 250 ml; baseline = 550 ml / 7 ≈ 79 ml/day → above.
+    expect(insights[0].fact).toContain("Yesterday's bottles (250 ml)")
     expect(insights[0].fact).toContain('above')
-    expect(insights[0].fact).toContain('7-day average (71 ml/day)')
+    expect(insights[0].fact).toContain('7-day average (79 ml/day)')
+  })
+
+  it('excludes the in-progress day (today) from the baseline and comparison', () => {
+    // A big feed today must not change yesterday's number or the baseline.
+    const withToday = [...fullWeekBottles, bottle('2026-07-08T09:00:00.000Z', 999)]
+    const insights = strategy.compute({ events: withToday, now: NOW })
+    expect(insights[0].fact).toContain("Yesterday's bottles (250 ml)")
+    expect(insights[0].fact).toContain('7-day average (79 ml/day)')
   })
 
   it('never uses judgment words (ADR-0005)', () => {
-    const events = [
-      bottle(ago(1)),
-      bottle(ago(2)),
-      bottle(ago(25)),
-      bottle(ago(26)),
-      bottle(ago(49)),
-    ]
-    const fact = strategy.compute({ events, now: NOW })[0].fact.toLowerCase()
+    const fact = strategy.compute({ events: fullWeekBottles, now: NOW })[0].fact.toLowerCase()
     for (const banned of ['enough', 'normal', 'should', 'ok']) {
       expect(fact).not.toContain(banned)
     }
@@ -88,31 +102,29 @@ describe('bottleVolumeStrategy', () => {
 describe('breastNursingStrategy', () => {
   const strategy = breastNursingStrategy()
 
+  const fullWeekBreast: BabyEvent[] = [
+    breast('2026-07-01T00:00:00.000Z', 20),
+    breast('2026-07-02T09:00:00.000Z', 20),
+    breast('2026-07-05T09:00:00.000Z', 20),
+    breast('2026-07-07T08:00:00.000Z', 20),
+    breast('2026-07-07T14:00:00.000Z', 20),
+  ]
+
   it('stays silent when the family never breastfeeds', () => {
-    const events = [bottle(ago(1)), bottle(ago(25)), bottle(ago(49))]
-    expect(strategy.compute({ events, now: NOW })).toEqual([])
+    expect(strategy.compute({ events: fullWeekBottles, now: NOW })).toEqual([])
   })
 
-  it('withholds a baseline until the gate is met', () => {
-    const insights = strategy.compute({ events: [breast(1, 20)], now: NOW })
-    expect(insights).toHaveLength(1)
-    expect(insights[0].kind).toBe('insufficient-data')
+  it('withholds until a full week of history', () => {
+    const events = [breast('2026-07-06T09:00:00.000Z', 20), breast('2026-07-07T09:00:00.000Z', 20)]
+    expect(strategy.compute({ events, now: NOW })[0].kind).toBe('insufficient-data')
   })
 
-  it('states today\'s nursing minutes vs the baseline', () => {
-    // 5 sessions over 3 days; today two 20-min sessions = 40 min.
-    const events = [
-      breast(1, 20),
-      breast(2, 20),
-      breast(25, 20),
-      breast(26, 20),
-      breast(49, 20),
-    ]
-    const insights = strategy.compute({ events, now: NOW })
+  it('compares yesterday\'s nursing minutes against the baseline', () => {
+    const insights = strategy.compute({ events: fullWeekBreast, now: NOW })
     expect(insights).toHaveLength(1)
     expect(insights[0].kind).toBe('comparison')
-    // Today = 40 min; baseline = 100 min / 7d ≈ 14 min/day → above.
-    expect(insights[0].fact).toContain("Today's nursing (40 min)")
+    // Yesterday (07-07) = 40 min; baseline = 100 min / 7 ≈ 14 min/day.
+    expect(insights[0].fact).toContain("Yesterday's nursing (40 min)")
     expect(insights[0].fact).toContain('14 min/day')
   })
 
@@ -121,15 +133,14 @@ describe('breastNursingStrategy', () => {
       type: 'feed',
       method: 'breast',
       side: 'right',
-      occurredAt: ago(0.25), // 15 min ago, still going
+      occurredAt: '2026-07-07T20:00:00.000Z', // yesterday, still going
       endedAt: null,
-      createdAt: ago(0.25),
+      createdAt: '2026-07-07T20:00:00.000Z',
     }
-    const events = [running, breast(1, 20), breast(2, 20), breast(25, 20), breast(26, 20), breast(49, 20)]
-    const insights = strategy.compute({ events, now: NOW })
-    // The running session contributes 0 min; today's two done sessions = 40 min.
+    const insights = strategy.compute({ events: [...fullWeekBreast, running], now: NOW })
+    // The running session contributes 0 min; yesterday's two done sessions = 40 min.
     expect(insights[0].kind).toBe('comparison')
-    expect(insights[0].fact).toContain("Today's nursing (40 min)")
+    expect(insights[0].fact).toContain("Yesterday's nursing (40 min)")
   })
 })
 
@@ -146,7 +157,7 @@ describe('nextFeedStrategy', () => {
   })
 
   it('counts breast and bottle feeds together', () => {
-    const events = [breast(4, 15), bottle(ago(3)), breast(2, 15), bottle(ago(1))]
+    const events = [breast(ago(4), 15), bottle(ago(3)), breast(ago(2), 15), bottle(ago(1))]
     const insights = strategy.compute({ events, now: NOW })
     expect(insights).toHaveLength(1)
     expect(insights[0].kind).toBe('prediction')
@@ -160,17 +171,15 @@ describe('nextFeedStrategy', () => {
 
 describe('listFeedStrategies via runStrategies', () => {
   it('flattens all feed strategies in render order', () => {
-    // A mixed-feeding family with a regular rhythm: bottle + nursing + prediction.
+    // Both methods present (so neither is silent) + regular recent feeds today
+    // (so next-feed fires). The exact insight bodies are covered above.
     const events: BabyEvent[] = [
-      bottle(ago(1), 120),
-      bottle(ago(2), 120),
-      bottle(ago(3), 120),
-      breast(4, 20),
-      breast(25, 20),
-      breast(26, 20),
-      breast(49, 20),
-      bottle(ago(26), 120),
-      bottle(ago(49), 120),
+      bottle('2026-07-01T00:00:00.000Z'),
+      breast('2026-07-01T06:00:00.000Z', 20),
+      bottle(ago(4)),
+      bottle(ago(3)),
+      bottle(ago(2)),
+      bottle(ago(1)),
     ]
     const insights = runStrategies(listFeedStrategies(), { events, now: NOW })
     expect(insights.map((i) => i.strategyId)).toEqual(['bottle-volume', 'breast-nursing', 'next-feed'])
@@ -178,6 +187,6 @@ describe('listFeedStrategies via runStrategies', () => {
 
   it('exposes tunable config as the documented defaults', () => {
     expect(DEFAULT_FEED_CONFIG.window.windowDays).toBe(7)
-    expect(DEFAULT_FEED_CONFIG.gate).toEqual({ minDays: 3, minEvents: 5 })
+    expect(DEFAULT_FEED_CONFIG.minEvents).toBe(5)
   })
 })

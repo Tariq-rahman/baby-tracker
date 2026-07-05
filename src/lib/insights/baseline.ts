@@ -35,6 +35,22 @@ function toLocalDay(iso: string): string {
   return localDay(new Date(iso))
 }
 
+/** Local midnight starting the calendar day that contains `d`. */
+function startOfDay(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
+/**
+ * The most recent *complete* local day before `now` — i.e. yesterday. Insights
+ * compare against this, never against today: today is still in progress, so
+ * comparing a partial day to a daily average always reads artificially low.
+ */
+export function lastCompleteDay(now: Date): string {
+  const d = startOfDay(now)
+  d.setDate(d.getDate() - 1)
+  return localDay(d)
+}
+
 /**
  * Events of `type` whose `occurredAt` falls in the trailing window
  * `[now - windowDays, now]`, oldest → newest.
@@ -99,6 +115,19 @@ export function windowSum<T extends EventType>(
   return listEventsInWindow(events, type, now, window).reduce((sum, e) => sum + metric(e), 0)
 }
 
+/** Sum of a metric over events of the type occurring on a specific local day. */
+export function daySum<T extends EventType>(
+  events: BabyEvent[],
+  type: T,
+  day: string,
+  metric: Metric<T>,
+): number {
+  return events
+    .filter((e): e is OfType<T> => e.type === type)
+    .filter((e) => toLocalDay(e.occurredAt) === day)
+    .reduce((sum, e) => sum + metric(e), 0)
+}
+
 /** Sum of a metric over events of the type occurring on `now`'s local calendar day. */
 export function todaySum<T extends EventType>(
   events: BabyEvent[],
@@ -106,11 +135,77 @@ export function todaySum<T extends EventType>(
   now: Date,
   metric: Metric<T>,
 ): number {
-  const day = localDay(now)
-  return events
+  return daySum(events, type, localDay(now), metric)
+}
+
+/** [start, end) ms bounds of the `windowDays` *complete* days ending yesterday. */
+function completeWindowBounds(now: Date, window: WindowConfig): [number, number] {
+  const end = startOfDay(now).getTime() // today's midnight — excludes the in-progress day
+  return [end - window.windowDays * DAY_MS, end]
+}
+
+/**
+ * The baby's own daily baseline over *complete* days only (today excluded), as
+ * `sum(metric) / windowDays`. Honest only once history spans the window — a day
+ * before tracking began would otherwise count as a phantom 0 and drag the mean
+ * down; `assessCompleteCoverage` gates on that (ADR-0006).
+ */
+export function completeDayBaseline<T extends EventType>(
+  events: BabyEvent[],
+  type: T,
+  now: Date,
+  metric: Metric<T>,
+  window: WindowConfig = DEFAULT_WINDOW,
+): number {
+  const [start, end] = completeWindowBounds(now, window)
+  const sum = events
     .filter((e): e is OfType<T> => e.type === type)
-    .filter((e) => toLocalDay(e.occurredAt) === day)
-    .reduce((sum, e) => sum + metric(e), 0)
+    .filter((e) => {
+      const t = Date.parse(e.occurredAt)
+      return t >= start && t < end
+    })
+    .reduce((acc, e) => acc + metric(e), 0)
+  return sum / window.windowDays
+}
+
+export interface CompleteCoverage {
+  /** Events of the type inside the complete-day window. */
+  eventCount: number
+  /** Distinct complete days in the window holding ≥1 event of the type. */
+  completeDays: number
+  /** True once the first-ever event of the type is old enough to fill the window. */
+  hasFullHistory: boolean
+  sufficient: boolean
+}
+
+/**
+ * Gate for a complete-day baseline (ADR-0006): withhold a comparison until the
+ * baby has a *full window* of real history (so dividing by `windowDays` is honest)
+ * and at least `minEvents` events in it. `minEvents` guards degenerate cases; the
+ * binding constraint is `hasFullHistory` — "you've been tracking for a week".
+ */
+export function assessCompleteCoverage<T extends EventType>(
+  events: BabyEvent[],
+  type: T,
+  now: Date,
+  minEvents: number,
+  window: WindowConfig = DEFAULT_WINDOW,
+): CompleteCoverage {
+  const [start, end] = completeWindowBounds(now, window)
+  const ofType = events.filter((e): e is OfType<T> => e.type === type)
+  const inWindow = ofType.filter((e) => {
+    const t = Date.parse(e.occurredAt)
+    return t >= start && t < end
+  })
+  const firstMs = ofType.reduce((min, e) => Math.min(min, Date.parse(e.occurredAt)), Infinity)
+  const eventCount = inWindow.length
+  const hasFullHistory = firstMs <= start
+  return {
+    eventCount,
+    completeDays: new Set(inWindow.map((e) => toLocalDay(e.occurredAt))).size,
+    hasFullHistory,
+    sufficient: hasFullHistory && eventCount >= minEvents,
+  }
 }
 
 /** Which side of the baseline a value falls on, given a relative tolerance band. */

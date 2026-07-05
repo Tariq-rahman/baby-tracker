@@ -1,14 +1,14 @@
 import type { BabyEvent, FeedEvent } from '../../db/schema'
 import { isBreastFeed, isFlaggedBreastFeed } from '../stats'
 import {
-  assessSufficiency,
+  assessCompleteCoverage,
   compareDirection,
-  dailyBaseline,
+  completeDayBaseline,
+  daySum,
+  lastCompleteDay,
   predictNext,
-  todaySum,
   type Metric,
   type PredictionConfig,
-  type SufficiencyGate,
   type WindowConfig,
 } from './baseline'
 import { insufficientData, type Insight, type InsightStrategy } from './types'
@@ -18,10 +18,10 @@ import { insufficientData, type Insight, type InsightStrategy } from './types'
  * and thresholds live in one reviewed place, never as magic numbers in the UI.
  */
 export interface FeedInsightConfig {
-  /** Trailing window for the baby's own baseline. */
+  /** Trailing window of complete days for the baby's own baseline. */
   window: WindowConfig
-  /** How much history before a baseline is stated rather than withheld. */
-  gate: SufficiencyGate
+  /** Min events in the window before a baseline is stated (full-window history is also required). */
+  minEvents: number
   /** Relative band for "about the same as" the baseline (0.1 ⇒ ±10%). */
   tolerance: number
   /** Confidence-gated next-feed prediction params. */
@@ -30,12 +30,14 @@ export interface FeedInsightConfig {
 
 export const DEFAULT_FEED_CONFIG: FeedInsightConfig = {
   window: { windowDays: 7 },
-  gate: { minDays: 3, minEvents: 5 },
+  minEvents: 5,
   tolerance: 0.1,
   // Predict off recent intervals (last day), not the whole baseline window — a
   // 7-day window makes day-gaps look erratic and suppresses every prediction.
   prediction: { window: { windowDays: 1 }, minIntervals: 3, maxCv: 0.5, minConfidence: 0.5 },
 }
+
+const KEEP_LOGGING = 'Keep logging — a weekly pattern will appear after about a week of data.'
 
 /** Bottle feeds only (absent method ⇒ bottle). */
 function listBottleFeeds(events: BabyEvent[]): BabyEvent[] {
@@ -51,9 +53,10 @@ function hhmm(d: Date): string {
 }
 
 /**
- * Bottle volume vs the baby's own baseline. States today's total against the
- * N-day daily average — a fact, not a verdict (ADR-0005). Silent when the family
- * bottle-feeds not at all; withheld ("keep logging") when they do but sparsely.
+ * Bottle volume vs the baby's own baseline. Compares *yesterday* (the last
+ * complete day) against the N-day daily average — a fact, not a verdict
+ * (ADR-0005). Silent when the family bottle-feeds not at all; withheld ("keep
+ * logging") until there's a full week of history to divide by honestly.
  */
 export function bottleVolumeStrategy(config: FeedInsightConfig = DEFAULT_FEED_CONFIG): InsightStrategy {
   const id = 'bottle-volume'
@@ -62,17 +65,17 @@ export function bottleVolumeStrategy(config: FeedInsightConfig = DEFAULT_FEED_CO
     compute({ events, now }) {
       const bottles = listBottleFeeds(events)
       if (bottles.length === 0) return []
-      if (!assessSufficiency(bottles, 'feed', now, config.gate, config.window).sufficient) {
-        return [insufficientData(id, 'Keep logging bottles — a weekly pattern appears after a few days.')]
+      if (!assessCompleteCoverage(bottles, 'feed', now, config.minEvents, config.window).sufficient) {
+        return [insufficientData(id, KEEP_LOGGING)]
       }
-      const baseline = Math.round(dailyBaseline(bottles, 'feed', now, bottleVolume, config.window))
-      const today = Math.round(todaySum(bottles, 'feed', now, bottleVolume))
-      const dir = compareDirection(today, baseline, config.tolerance)
+      const baseline = Math.round(completeDayBaseline(bottles, 'feed', now, bottleVolume, config.window))
+      const yesterday = Math.round(daySum(bottles, 'feed', lastCompleteDay(now), bottleVolume))
+      const dir = compareDirection(yesterday, baseline, config.tolerance)
       return [
         {
           strategyId: id,
           kind: 'comparison',
-          fact: `Today's bottles (${today} ml) are ${dir} this baby's ${config.window.windowDays}-day average (${baseline} ml/day).`,
+          fact: `Yesterday's bottles (${yesterday} ml) were ${dir} this baby's ${config.window.windowDays}-day average (${baseline} ml/day).`,
         },
       ]
     },
@@ -81,8 +84,9 @@ export function bottleVolumeStrategy(config: FeedInsightConfig = DEFAULT_FEED_CO
 
 /**
  * Nursing minutes vs the baby's own baseline. Sums each breast feed's duration
- * (running/flagged sessions contribute 0), keyed by the day it started, so today
- * and the baseline are measured the same way. Silent with no breast feeds.
+ * (running/flagged sessions contribute 0), keyed by the day it started, and
+ * compares *yesterday* against the complete-day average. Silent with no breast
+ * feeds; withheld until a full week of history.
  */
 export function breastNursingStrategy(config: FeedInsightConfig = DEFAULT_FEED_CONFIG): InsightStrategy {
   const id = 'breast-nursing'
@@ -98,17 +102,17 @@ export function breastNursingStrategy(config: FeedInsightConfig = DEFAULT_FEED_C
         const mins = (Date.parse(e.endedAt) - Date.parse(e.occurredAt)) / 60000
         return mins > 0 ? mins : 0
       }
-      if (!assessSufficiency(breast, 'feed', now, config.gate, config.window).sufficient) {
-        return [insufficientData(id, 'Keep logging nursing — a weekly pattern appears after a few days.')]
+      if (!assessCompleteCoverage(breast, 'feed', now, config.minEvents, config.window).sufficient) {
+        return [insufficientData(id, KEEP_LOGGING)]
       }
-      const baseline = Math.round(dailyBaseline(breast, 'feed', now, nursingMinutes, config.window))
-      const today = Math.round(todaySum(breast, 'feed', now, nursingMinutes))
-      const dir = compareDirection(today, baseline, config.tolerance)
+      const baseline = Math.round(completeDayBaseline(breast, 'feed', now, nursingMinutes, config.window))
+      const yesterday = Math.round(daySum(breast, 'feed', lastCompleteDay(now), nursingMinutes))
+      const dir = compareDirection(yesterday, baseline, config.tolerance)
       return [
         {
           strategyId: id,
           kind: 'comparison',
-          fact: `Today's nursing (${today} min) is ${dir} this baby's ${config.window.windowDays}-day average (${baseline} min/day).`,
+          fact: `Yesterday's nursing (${yesterday} min) was ${dir} this baby's ${config.window.windowDays}-day average (${baseline} min/day).`,
         },
       ]
     },

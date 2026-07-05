@@ -11,6 +11,10 @@ import {
   confidenceFromCv,
   predictNext,
   todaySum,
+  daySum,
+  lastCompleteDay,
+  completeDayBaseline,
+  assessCompleteCoverage,
   compareDirection,
   localDay,
   type WindowConfig,
@@ -161,6 +165,86 @@ describe('localDay & todaySum', () => {
   it('is zero when nothing happened today', () => {
     expect(todaySum([feed(ago(25), 80)], 'feed', NOW, countMetric)).toBe(0)
   })
+})
+
+describe('lastCompleteDay & daySum', () => {
+  const vol = (e: BabyEvent) => (e.type === 'feed' && e.method !== 'breast' ? e.volumeMl : 0)
+
+  it('returns yesterday (the last complete day before now)', () => {
+    expect(lastCompleteDay(NOW)).toBe('2026-07-07')
+  })
+
+  it('sums a metric over a specific local day only', () => {
+    const events: BabyEvent[] = [
+      feed('2026-07-07T08:00:00.000Z', 120),
+      feed('2026-07-07T20:00:00.000Z', 130),
+      feed('2026-07-08T09:00:00.000Z', 999), // today — excluded
+    ]
+    expect(daySum(events, 'feed', '2026-07-07', vol)).toBe(250)
+  })
+})
+
+describe('completeDayBaseline', () => {
+  const vol = (e: BabyEvent) => (e.type === 'feed' && e.method !== 'breast' ? e.volumeMl : 0)
+
+  it('averages complete days over the window, excluding today', () => {
+    const events: BabyEvent[] = [
+      feed('2026-07-01T00:00:00.000Z', 100),
+      feed('2026-07-05T09:00:00.000Z', 100),
+      feed('2026-07-07T09:00:00.000Z', 100),
+      feed('2026-07-08T09:00:00.000Z', 999), // today — must not count
+    ]
+    // 300 ml over the 7 complete days [07-01, 07-08) → 300/7.
+    expect(completeDayBaseline(events, 'feed', NOW, vol, WEEK)).toBeCloseTo(300 / 7)
+  })
+})
+
+describe('assessCompleteCoverage', () => {
+  const cases: {
+    name: string
+    events: BabyEvent[]
+    wantSufficient: boolean
+    wantFullHistory: boolean
+  }[] = [
+    { name: 'cold start — no events', events: [], wantSufficient: false, wantFullHistory: false },
+    {
+      name: 'recent events only — no full week of history',
+      events: [feed('2026-07-05T09:00:00.000Z'), feed('2026-07-06T09:00:00.000Z'), feed('2026-07-07T09:00:00.000Z')],
+      wantSufficient: false,
+      wantFullHistory: false,
+    },
+    {
+      name: 'full week of history but too few events',
+      events: [feed('2026-07-01T00:00:00.000Z'), feed('2026-07-07T09:00:00.000Z')],
+      wantSufficient: false,
+      wantFullHistory: true,
+    },
+    {
+      name: 'full history and enough events',
+      events: [
+        feed('2026-07-01T00:00:00.000Z'),
+        feed('2026-07-02T09:00:00.000Z'),
+        feed('2026-07-05T09:00:00.000Z'),
+        feed('2026-07-07T08:00:00.000Z'),
+        feed('2026-07-07T14:00:00.000Z'),
+      ],
+      wantSufficient: true,
+      wantFullHistory: true,
+    },
+    {
+      name: 'today-only events do not count toward coverage',
+      events: [feed('2026-07-08T06:00:00.000Z'), feed('2026-07-08T09:00:00.000Z')],
+      wantSufficient: false,
+      wantFullHistory: false,
+    },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      const result = assessCompleteCoverage(c.events, 'feed', NOW, 5, WEEK)
+      expect(result.sufficient).toBe(c.wantSufficient)
+      expect(result.hasFullHistory).toBe(c.wantFullHistory)
+    })
+  }
 })
 
 describe('compareDirection', () => {
