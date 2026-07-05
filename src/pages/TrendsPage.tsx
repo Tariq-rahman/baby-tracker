@@ -9,10 +9,12 @@ import { useEvents } from '../hooks/useEvents'
 import { useBaby, useEnabledEventTypes } from '../hooks/useBaby'
 import { getLastEventOfType } from '../lib/stats'
 import { listDailyTrend, listWindowDays, seriesMean, TREND_WINDOWS } from '../lib/trends'
+import { listFeedStrategies, runStrategies } from '../lib/insights'
 import { gramsToKg } from '../lib/units'
 import { eventColor } from '../lib/theme'
 import type { EventType, WeightEvent } from '../db/schema'
 import TrendCard, { type TrendSeries } from '../components/TrendCard'
+import InsightList from '../components/InsightList'
 import { ChevronRight } from '../components/icons'
 
 /** One-decimal average, blank when zero, for the header badges. */
@@ -38,8 +40,6 @@ export default function TrendsPage() {
   const shows = (t: EventType) => enabled.includes(t)
 
   const feedCount = trend.map((p) => p.feedCount)
-  const feedVolume = trend.map((p) => p.feedVolumeMl)
-  const nursing = trend.map((p) => p.nursingMinutes)
   const sleepHours = trend.map((p) => Math.round((p.sleepMinutes / 60) * 10) / 10)
   const nappyWet = trend.map((p) => p.nappyWet)
   const nappyDirty = trend.map((p) => p.nappyDirty)
@@ -50,10 +50,9 @@ export default function TrendsPage() {
     { key: 'dirty', label: 'Dirty', color: eventColor.nappy, values: nappyDirty },
   ]
 
-  const feedSub = [
-    avgBadge(feedVolume, ' ml'),
-    avgBadge(nursing, ' min'),
-  ].filter(Boolean).join(' · ')
+  // Reflective feed insights (Task 1.3). The baseline is the baby's own 7-day
+  // window (ADR-0006), independent of the chart's window selector.
+  const feedInsights = runStrategies(listFeedStrategies(), { events, now })
 
   return (
     <div className="px-5 pt-3">
@@ -84,7 +83,7 @@ export default function TrendsPage() {
             series={[{ key: 'feed', label: 'Feeds', color: eventColor.feed, values: feedCount }]}
             badge={avgBadge(feedCount, '/day')}
             baseline={seriesMean(feedCount)}
-            insight={feedSub ? <span className="text-inkSoft">{feedSub} on average</span> : undefined}
+            insight={feedInsights.length ? <InsightList insights={feedInsights} /> : undefined}
           />
         )}
 

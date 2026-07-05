@@ -2,6 +2,7 @@ import type { Insight, InsightInput, InsightStrategy } from './types'
 
 export * from './types'
 export * from './baseline'
+export * from './strategies'
 
 /**
  * Run every strategy over the same input and flatten their insights. Strategies

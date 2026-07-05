@@ -22,13 +22,17 @@ export interface SufficiencyGate {
 
 type OfType<T extends EventType> = Extract<BabyEvent, { type: T }>
 
-/** Local 'YYYY-MM-DD' for an ISO datetime (tests run in UTC, so UTC == local). */
-function toLocalDay(iso: string): string {
-  const d = new Date(iso)
+/** Local 'YYYY-MM-DD' of a Date (tests run in UTC, so UTC == local). */
+export function localDay(d: Date): string {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
   const day = String(d.getDate()).padStart(2, '0')
   return `${y}-${m}-${day}`
+}
+
+/** Local 'YYYY-MM-DD' for an ISO datetime. */
+function toLocalDay(iso: string): string {
+  return localDay(new Date(iso))
 }
 
 /**
@@ -93,6 +97,36 @@ export function windowSum<T extends EventType>(
   window: WindowConfig = DEFAULT_WINDOW,
 ): number {
   return listEventsInWindow(events, type, now, window).reduce((sum, e) => sum + metric(e), 0)
+}
+
+/** Sum of a metric over events of the type occurring on `now`'s local calendar day. */
+export function todaySum<T extends EventType>(
+  events: BabyEvent[],
+  type: T,
+  now: Date,
+  metric: Metric<T>,
+): number {
+  const day = localDay(now)
+  return events
+    .filter((e): e is OfType<T> => e.type === type)
+    .filter((e) => toLocalDay(e.occurredAt) === day)
+    .reduce((sum, e) => sum + metric(e), 0)
+}
+
+/** Which side of the baseline a value falls on, given a relative tolerance band. */
+export type Direction = 'below' | 'above' | 'about the same as'
+
+/**
+ * Compare `today` against `baseline` within a ±`tolerance` band (0.1 ⇒ ±10%).
+ * Returns a plain comparative fact-word (ADR-0005) — never a judgment word.
+ * A non-positive baseline collapses to "about the same as" (nothing to compare).
+ */
+export function compareDirection(today: number, baseline: number, tolerance: number): Direction {
+  if (baseline <= 0) return 'about the same as'
+  const ratio = (today - baseline) / baseline
+  if (ratio > tolerance) return 'above'
+  if (ratio < -tolerance) return 'below'
+  return 'about the same as'
 }
 
 /**
