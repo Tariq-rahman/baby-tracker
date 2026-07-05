@@ -39,7 +39,7 @@ describe('listEventsInWindow', () => {
       { type: 'nappy', nappyType: 'wet', occurredAt: ago(2), createdAt: ago(2) }, // wrong type
     ]
     const inWindow = listEventsInWindow(events, 'feed', NOW, WEEK)
-    expect(inWindow.map((e) => e.volumeMl)).toEqual([10, 30])
+    expect(inWindow.map((e) => (e.method === 'breast' ? 0 : e.volumeMl))).toEqual([10, 30])
   })
 
   it('includes an event exactly at the window start and excludes future events', () => {
@@ -85,7 +85,7 @@ describe('windowSum & dailyBaseline', () => {
   const events: BabyEvent[] = [feed(ago(1), 100), feed(ago(2), 120), feed(ago(25), 80)]
 
   it('sums a metric across the window', () => {
-    expect(windowSum(events, 'feed', NOW, (e) => e.volumeMl, WEEK)).toBe(300)
+    expect(windowSum(events, 'feed', NOW, (e) => (e.method === 'breast' ? 0 : e.volumeMl), WEEK)).toBe(300)
   })
 
   it('counts events with countMetric', () => {
@@ -94,7 +94,9 @@ describe('windowSum & dailyBaseline', () => {
 
   it('divides the window sum by calendar days for the daily baseline', () => {
     // 300ml over a 7-day window → ~42.86 ml/day (0-event days count as 0).
-    expect(dailyBaseline(events, 'feed', NOW, (e) => e.volumeMl, WEEK)).toBeCloseTo(300 / 7)
+    expect(dailyBaseline(events, 'feed', NOW, (e) => (e.method === 'breast' ? 0 : e.volumeMl), WEEK)).toBeCloseTo(
+      300 / 7,
+    )
   })
 })
 

@@ -18,9 +18,11 @@ import {
   importAll,
   startSleep,
   stopSleep,
+  startBreastFeed,
+  stopBreastFeed,
 } from './storage'
 import { DEFAULT_ENABLED_EVENT_TYPES } from './schema'
-import type { SleepEvent } from './schema'
+import type { BreastFeedEvent, SleepEvent } from './schema'
 
 const feed = {
   type: 'feed' as const,
@@ -108,6 +110,23 @@ describe('storage', () => {
     const stopped = (await db.events.get(id)) as SleepEvent
     expect(stopped.endedAt).toBe(end)
     expect((await db._pending.toArray()).length).toBeGreaterThan(0) // start + stop both queued
+  })
+
+  it('startBreastFeed creates an open breast feed (endedAt null); stopBreastFeed sets its end', async () => {
+    const start = '2026-06-09T13:00:00.000Z'
+    const id = await startBreastFeed(start, 'left')
+
+    const open = (await db.events.get(id)) as BreastFeedEvent
+    expect(open.type).toBe('feed')
+    expect(open.method).toBe('breast')
+    expect(open.side).toBe('left')
+    expect(open.occurredAt).toBe(start)
+    expect(open.endedAt).toBeNull()
+
+    const end = '2026-06-09T13:12:00.000Z'
+    await stopBreastFeed(id, end)
+    const stopped = (await db.events.get(id)) as BreastFeedEvent
+    expect(stopped.endedAt).toBe(end)
   })
 
   it('saves the singleton baby, stamps a uid, and preserves it across saves', async () => {

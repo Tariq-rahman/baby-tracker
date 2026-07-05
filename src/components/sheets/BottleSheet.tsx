@@ -2,14 +2,7 @@ import { useLayoutEffect, useRef, useState } from 'react'
 import type { FeedEvent, FeedContent } from '../../db/schema'
 import { eventColor, palette } from '../../lib/theme'
 import { MinusIcon, PlusIcon } from '../icons'
-import {
-  Chip,
-  DeleteButton,
-  DragHandle,
-  QuickTimeRow,
-  SaveButton,
-  SheetHeader,
-} from './sheetParts'
+import { Chip, DeleteButton, QuickTimeRow, SaveButton } from './sheetParts'
 
 interface Props {
   initial?: FeedEvent
@@ -24,8 +17,14 @@ interface Props {
 const PRESETS = [30, 60, 90, 120, 150, 180, 210, 240, 270, 300]
 const col = eventColor.feed
 
+/**
+ * The bottle body of the feed sheet (FeedSheet owns the drag handle, header and
+ * the bottle/breast toggle). A bottle is an instant, volume-based feed.
+ */
 export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClose }: Props) {
-  const prefill = initial ?? lastFeed
+  const prefillSrc = initial ?? lastFeed
+  // Only a bottle carries a volume/content to prefill — ignore a breast feed here.
+  const prefill = prefillSrc && prefillSrc.method !== 'breast' ? prefillSrc : undefined
   const [volume, setVolume] = useState(prefill ? String(prefill.volumeMl) : '')
   const [content, setContent] = useState<FeedContent | undefined>(prefill?.content)
   const [when, setWhen] = useState(() => (initial ? new Date(initial.occurredAt) : new Date()))
@@ -51,6 +50,7 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
     if (!volumeMl) return
     onSave({
       type: 'feed',
+      method: 'bottle',
       volumeMl,
       content,
       occurredAt: when.toISOString(),
@@ -63,10 +63,7 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
     'press flex h-12 w-12 items-center justify-center rounded-full border border-faint bg-surface'
 
   return (
-    <div className="px-5 pb-7 pt-3.5">
-      <DragHandle />
-      <SheetHeader type="feed" title={initial ? 'Edit feed' : 'Log feed'} onClose={onClose} />
-
+    <>
       <div className="mb-4 flex items-center justify-center gap-5">
         <button type="button" aria-label="Decrease" className={stepBtn} onClick={() => bump(-10)}>
           <MinusIcon size={22} color={palette.ink} />
@@ -143,6 +140,6 @@ export default function BottleSheet({ initial, lastFeed, onSave, onDelete, onClo
       <QuickTimeRow value={when} onChange={setWhen} />
       <SaveButton color={col} label="feed" onClick={handleSave} />
       {initial && onDelete && <DeleteButton onClick={onDelete} />}
-    </div>
+    </>
   )
 }

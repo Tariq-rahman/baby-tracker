@@ -1,5 +1,5 @@
 import { db, DEFAULT_ENABLED_EVENT_TYPES } from './schema'
-import type { Baby, Medication, BabyEvent, EventType, SyncTable, SyncFields } from './schema'
+import type { Baby, Medication, BabyEvent, BreastSide, EventType, SyncTable, SyncFields } from './schema'
 
 const BABY_ID = 1
 
@@ -145,6 +145,23 @@ export async function startSleep(occurredAt: string): Promise<number> {
 }
 /** Stop a running sleep by setting its end. Editing a running sleep's end IS the stop. */
 export async function stopSleep(id: number, endedAt: string): Promise<void> {
+  await updateEvent(id, { endedAt })
+}
+
+// --- Breastfeeding (a Feed that is a duration event; mirrors Sleep — ADR-0007) ---
+/** Begin a running breast feed — a synced Feed row with `endedAt: null` (visible to all caregivers). */
+export async function startBreastFeed(occurredAt: string, side: BreastSide): Promise<number> {
+  return addEvent({
+    type: 'feed',
+    method: 'breast',
+    side,
+    occurredAt,
+    endedAt: null,
+    createdAt: new Date().toISOString(),
+  })
+}
+/** Stop a running breast feed by setting its end. Editing a running feed's end IS the stop. */
+export async function stopBreastFeed(id: number, endedAt: string): Promise<void> {
   await updateEvent(id, { endedAt })
 }
 

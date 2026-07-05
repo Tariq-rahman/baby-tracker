@@ -8,8 +8,11 @@ import {
   sleepMinutesForDay,
   formatSleepDuration,
   fmtElapsed,
+  getRunningBreastFeed,
+  isFlaggedBreastFeed,
+  nursingMinutesForDay,
 } from './stats'
-import type { BabyEvent, SleepEvent } from '../db/schema'
+import type { BabyEvent, BreastFeedEvent, SleepEvent } from '../db/schema'
 
 const events: BabyEvent[] = [
   { id: 1, type: 'feed', volumeMl: 120, occurredAt: '2026-06-09T08:00:00.000Z', createdAt: '2026-06-09T08:00:00.000Z' },
@@ -44,6 +47,16 @@ describe('getDailyTotals', () => {
     expect(totals.nappyWet).toBe(1)
     expect(totals.nappyDirty).toBe(1) // 'both' counts as a dirty
     expect(totals.doseCount).toBe(0)
+  })
+
+  it('counts a breast feed toward feedCount but never reads its absent volume (ADR-0007)', () => {
+    const withBreast: BabyEvent[] = [
+      ...events,
+      breastFeed({ occurredAt: '2026-06-09T14:00:00.000Z', endedAt: '2026-06-09T14:10:00.000Z' }),
+    ]
+    const totals = getDailyTotals(withBreast, '2026-06-09')
+    expect(totals.feedCount).toBe(3) // 2 bottles + 1 breast
+    expect(totals.feedVolumeMl).toBe(220) // unchanged — no NaN from the breast feed
   })
 })
 
@@ -82,6 +95,64 @@ describe('isFlaggedSleep', () => {
     expect(
       isFlaggedSleep(sleep({ occurredAt: start, endedAt: '2026-06-10T02:00:00.000Z' }), new Date('2026-06-10T03:00:00.000Z')),
     ).toBe(false)
+  })
+})
+
+const breastFeed = (
+  over: Partial<BreastFeedEvent> & { occurredAt: string; endedAt: string | null },
+): BreastFeedEvent => ({
+  id: 200,
+  type: 'feed',
+  method: 'breast',
+  side: 'left',
+  createdAt: over.occurredAt,
+  ...over,
+})
+
+describe('nursingMinutesForDay', () => {
+  it('sums finished breast feeds, clipping to the day, and ignores bottle feeds', () => {
+    const list: BabyEvent[] = [
+      ...events, // bottle feeds — contribute no nursing minutes
+      breastFeed({ occurredAt: '2026-06-09T08:00:00.000Z', endedAt: '2026-06-09T08:12:00.000Z' }),
+      breastFeed({ occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T11:18:00.000Z' }),
+    ]
+    expect(nursingMinutesForDay(list, '2026-06-09', new Date('2026-06-09T20:00:00.000Z'))).toBe(30)
+  })
+
+  it('counts a running breast feed up to now', () => {
+    const running = [breastFeed({ occurredAt: '2026-06-09T13:00:00.000Z', endedAt: null })]
+    expect(nursingMinutesForDay(running, '2026-06-09', new Date('2026-06-09T13:15:00.000Z'))).toBe(15)
+  })
+
+  it('excludes a running breast feed flagged as forgotten (>3h)', () => {
+    const stale = [breastFeed({ occurredAt: '2026-06-09T08:00:00.000Z', endedAt: null })]
+    expect(nursingMinutesForDay(stale, '2026-06-09', new Date('2026-06-09T12:00:00.000Z'))).toBe(0)
+  })
+})
+
+describe('isFlaggedBreastFeed', () => {
+  it('flags a running breast feed past 3h, not a shorter or finished one', () => {
+    const start = '2026-06-09T08:00:00.000Z'
+    expect(isFlaggedBreastFeed(breastFeed({ occurredAt: start, endedAt: null }), new Date('2026-06-09T12:00:00.000Z'))).toBe(true)
+    expect(isFlaggedBreastFeed(breastFeed({ occurredAt: start, endedAt: null }), new Date('2026-06-09T09:00:00.000Z'))).toBe(false)
+    expect(
+      isFlaggedBreastFeed(breastFeed({ occurredAt: start, endedAt: '2026-06-09T14:00:00.000Z' }), new Date('2026-06-09T15:00:00.000Z')),
+    ).toBe(false)
+  })
+})
+
+describe('getRunningBreastFeed', () => {
+  it('returns the earliest-started open breast feed, ignoring bottles and finished feeds', () => {
+    const list: BabyEvent[] = [
+      ...events, // bottle feeds — never "running"
+      breastFeed({ id: 1, occurredAt: '2026-06-09T14:00:00.000Z', endedAt: null }),
+      breastFeed({ id: 2, occurredAt: '2026-06-09T10:00:00.000Z', endedAt: null }),
+      breastFeed({ id: 3, occurredAt: '2026-06-09T08:00:00.000Z', endedAt: '2026-06-09T08:10:00.000Z' }),
+    ]
+    expect(getRunningBreastFeed(list)?.id).toBe(2)
+  })
+  it('returns undefined when nothing is nursing', () => {
+    expect(getRunningBreastFeed(events)).toBeUndefined()
   })
 })
 

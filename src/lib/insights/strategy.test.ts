@@ -33,7 +33,9 @@ const bottleVolumeStrategy: InsightStrategy = {
     if (!assessSufficiency(events, 'feed', now, { minDays: 3, minEvents: 5 }).sufficient) {
       return [insufficientData('bottle-volume', 'Keep logging — patterns appear after about a week.')]
     }
-    const perDay = Math.round(dailyBaseline(events, 'feed', now, (e) => e.volumeMl))
+    const perDay = Math.round(
+      dailyBaseline(events, 'feed', now, (e) => (e.method === 'breast' ? 0 : e.volumeMl)),
+    )
     const insights: Insight[] = [
       { strategyId: 'bottle-volume', kind: 'observation', fact: `${perDay} ml/day this week on average.` },
     ]

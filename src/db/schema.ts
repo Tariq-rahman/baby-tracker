@@ -2,6 +2,8 @@ import Dexie, { type Table, type Transaction } from 'dexie'
 
 export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep'
 export type FeedContent = 'formula' | 'breastmilk'
+export type FeedMethod = 'bottle' | 'breast'
+export type BreastSide = 'left' | 'right' | 'both'
 export type NappyType = 'wet' | 'dirty' | 'both'
 export type NappySize = 'small' | 'medium' | 'large'
 export type MedicationUnit = 'ml' | 'mg' | 'IU' | 'drops'
@@ -66,11 +68,28 @@ interface BaseEvent extends SyncFields {
   occurredAt: string // ISO datetime
   createdAt: string // ISO datetime
 }
-export interface FeedEvent extends BaseEvent {
+/**
+ * A Feed is discriminated by `method` (ADR-0007):
+ *  - **bottle** — an instant event with `volumeMl` (+ optional `content`).
+ *  - **breast** — a duration event reusing the Sleep pattern (ADR-0003):
+ *    `occurredAt` = start, `endedAt` null ⇒ nursing in progress, plus a `side`.
+ *    No volume. Total nursing time is derived from start→end.
+ * `method` is optional on the bottle arm so pre-ADR-0007 rows (which carry no
+ * method) read back as bottles — no Dexie or server migration needed.
+ */
+export interface BottleFeedEvent extends BaseEvent {
   type: 'feed'
+  method?: 'bottle'
   volumeMl: number
   content?: FeedContent
 }
+export interface BreastFeedEvent extends BaseEvent {
+  type: 'feed'
+  method: 'breast'
+  side: BreastSide
+  endedAt: string | null // ISO datetime; null ⇒ nursing in progress
+}
+export type FeedEvent = BottleFeedEvent | BreastFeedEvent
 export interface NappyEvent extends BaseEvent {
   type: 'nappy'
   nappyType: NappyType
