@@ -1,5 +1,12 @@
 import type { BabyEvent, FeedEvent, Medication } from '../../db/schema'
-import { addEvent, updateEvent, deleteEvent } from '../../db/storage'
+import {
+  addEvent,
+  updateEvent,
+  deleteEvent,
+  startSleep,
+  startBreastFeed,
+  type StartDurationResult,
+} from '../../db/storage'
 import FeedSheet from './FeedSheet'
 import NappySheet from './NappySheet'
 import DoseSheet from './DoseSheet'
@@ -17,7 +24,7 @@ interface Props {
   /** True when a breast feed is already open — hides "Start feed now" in the feed sheet. */
   hasRunningBreastFeed?: boolean
   onClose: () => void
-  onSaved?: (event: BabyEvent) => void
+  onSaved?: (event: BabyEvent, resume?: StartDurationResult) => void
 }
 
 export default function EventSheet({
@@ -35,10 +42,20 @@ export default function EventSheet({
   async function handleSave(event: BabyEvent) {
     if (editing?.id) {
       await updateEvent(editing.id, event)
-    } else {
-      await addEvent(event)
-      onSaved?.(event)
+      return
     }
+    // Starting a running duration event (sleep / breast feed) goes through the
+    // resume-aware helpers so a just-ended session is reopened, not duplicated (Task 1.6).
+    if (event.type === 'sleep' && event.endedAt == null) {
+      onSaved?.(event, await startSleep(event.occurredAt))
+      return
+    }
+    if (event.type === 'feed' && event.method === 'breast' && event.endedAt == null) {
+      onSaved?.(event, await startBreastFeed(event.occurredAt, event.side))
+      return
+    }
+    await addEvent(event)
+    onSaved?.(event)
   }
 
   async function handleDelete() {

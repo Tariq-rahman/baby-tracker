@@ -11,7 +11,7 @@ import {
   sleepMinutesForDay,
   formatSleepDuration,
 } from '../lib/stats'
-import { stopSleep, stopBreastFeed } from '../db/storage'
+import { stopSleep, stopBreastFeed, undoResume, type StartDurationResult } from '../db/storage'
 import { fmtClock, relativeTime } from '../lib/format'
 import type { BabyEvent } from '../db/schema'
 import type { LogKind } from '../components/LogButtons'
@@ -54,7 +54,33 @@ export default function HomePage() {
   const hint = lastFeed ? `Last feed ${relativeTime(lastFeed.occurredAt, now)}` : 'No feeds yet'
   const center = fmtClock(now)
 
-  function showToast(event: BabyEvent) {
+  function flashToast(data: ToastData, ms = 2600) {
+    setToast(data)
+    clearTimeout(toastTimer.current)
+    toastTimer.current = setTimeout(() => setToast(null), ms)
+  }
+
+  function showToast(event: BabyEvent, resume?: StartDurationResult) {
+    // We reopened a just-ended session instead of starting a new one — offer to undo (Task 1.6).
+    if (resume?.resumed && resume.previousEndedAt != null) {
+      flashToast(
+        {
+          type: event.type,
+          text: 'Resumed previous',
+          action: {
+            label: 'Undo',
+            onAction: () => {
+              void undoResume(resume.id, resume.previousEndedAt!, event)
+              setToast(null)
+              clearTimeout(toastTimer.current)
+            },
+          },
+        },
+        5000, // longer — the undo needs a beat to be noticed
+      )
+      return
+    }
+
     let text: string
     switch (event.type) {
       case 'feed':
@@ -77,9 +103,7 @@ export default function HomePage() {
         text = 'Meds logged'
         break
     }
-    setToast({ type: event.type, text })
-    clearTimeout(toastTimer.current)
-    toastTimer.current = setTimeout(() => setToast(null), 2600)
+    flashToast({ type: event.type, text })
   }
 
   async function handleStopSleep() {

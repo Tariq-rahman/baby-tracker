@@ -1,14 +1,13 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 17:45 · Branch: main (4e4a25b) · Task 1.5 Settings restructure MERGED (PR #19); DX phase planned; next = DX.1 (or Task 1.6)_
+_Updated: 2026-07-05 18:45 · Branch: feat/duration-event-resume (off main da17bd2), commit 46cbeea · Task 1.6 CODE DONE, gate green, no PR yet_
 
 ## Goal
-Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). A cross-cutting **DX phase** (developer experience / testability) was added 2026-07-05.
+Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). The **DX phase** (visual-check loop) was planned but **deprioritised** this session in favour of shipping **H1 Task 1.6 — Duration-event resume**.
 
 ## Status
-**H1 Task 1.5 (Settings restructure) is DONE & MERGED** ([PR #19](https://github.com/Tariq-rahman/baby-tracker/pull/19), merge `d4cf61f`, feature `37a4fdb`). Gate green: `npm run build`, `npx eslint src/` clean, **264 tests**. Pure restructure of `SettingsPage.tsx` into six labelled sections (Baby & Household · Tracking · Notifications · Appearance · Data · Account). ⚠️ **Not visually verified** — no browser automation in this env; needs eyeballing on the deploy (this is exactly what the new DX.1 fixes).
-Also this session: **grilled + planned the DX phase** (browser automation for AI visual checks, seeded data, login bypass, staging) — see the plan + roadmap. No DX code written yet.
-(Task 1.4 dark mode: DONE, MERGED, VERIFIED live — PR #18, `54785c3`.)
+**H1 Task 1.6 (Duration-event resume) is CODE-COMPLETE on `feat/duration-event-resume` (commit `46cbeea`).** Gate green: `npm run build` ✓, `npx eslint src/` clean, **276 tests** (+12). No PR opened yet; not yet visually verified in a browser (this env has no browser automation — the deferred DX.1 was meant to fix exactly that). DX.1 (visual-check loop) was scoped/planned but not built; its branch `feat/dx-visual-check-loop` has no commits.
+(Task 1.5 Settings sections: DONE & MERGED — [PR #19](https://github.com/Tariq-rahman/baby-tracker/pull/19), merge `d4cf61f`. Task 1.4 dark mode: MERGED & VERIFIED — PR #18.)
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -43,17 +42,31 @@ Also this session: **grilled + planned the DX phase** (browser automation for AI
 
 - **DX phase — grilled & planned** (not built). New plan [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md) + a DX section in ROADMAP.md. Settled: AI visual-check loop runs **local, no backend**; login bypass = **separate dev entry** (`main.dev.tsx`/`index.dev.html`) absent from the prod build; **Playwright `npm run shots`** (eyes, no CI); **one shared TS fixture** seeds Dexie + staging; **dedicated staging Supabase + Vercel previews**, prod never the test target; staging test account = **real inbox + magic link** (no password auth).
 
+- **H1 Task 1.6 — Duration-event resume** — CODE DONE (`feat/duration-event-resume`, `46cbeea`), gate green, no PR yet:
+  - A **Duration Event** = sleep OR breast feed. Starting one now reopens the most-recently-*ended* session of that kind if it ended within **`RESUME_WINDOW_MS` (5 min)** — an accidental stop-then-restart is one interrupted session, not two.
+  - `stats.ts`: pure `getResumableDurationEvent(events, kind, now, windowMs)` (`kind: 'sleep'|'breast'`; picks the latest `endedAt`, ignores running + future-dated ends). `storage.ts`: `startSleep`/`startBreastFeed` are now resume-aware and return `StartDurationResult {id, resumed, previousEndedAt}` (was `Promise<number>`); reopening keeps the original `occurredAt` + side.
+  - **Undo = re-close the reopened row at its prior end AND create the genuinely-new session** (`undoResume(id, previousEndedAt, newEvent)`) — the only reading where "a genuine double-nap is recoverable" holds in one tap.
+  - Wiring: `EventSheet.handleSave` routes the *start-now* path (adding, `endedAt == null`, sleep or breast) through the helpers and bubbles the result via `onSaved(event, resume?)`. `Toast` gained an optional inline `action` button; `HomePage.showToast` shows "Resumed previous — Undo" (5s) and wires undo.
+  - +12 tests (pure helper 8, storage resume/new/undo 4, EventSheet routing 1; existing start* tests updated to destructure `{id}`). Suite 264 → 276.
+
 ## Done (out of roadmap — bug fixes on main)
 - **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
 
 ## Next
-1. **Merge PR #19** (Settings sections) once eyeballed. Then fresh branch off `main`.
-2. **DX.1 — Local visual-check loop** (recommended next — unblocks visual verification for all future UI work). Per the DX plan: extract `AppShell` from `App.tsx` → add `index.dev.html`/`main.dev.tsx` (skip `AuthGate`) → `src/dev/fixture.ts` + `seedDevData()` → Playwright `npm run shots`. Self-contained, in-sandbox, no cost.
-   - _Alternative:_ **H1 Task 1.6 — Duration-event resume** (QoL) continues the product roadmap instead.
-3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
-4. **DX.2 — Staging + test account** (later; backend-side) — see DX plan.
+1. **Open a PR for Task 1.6** (`feat/duration-event-resume` → `main`). `gh`/`git push` need the sandbox disabled (env blocks TLS to github.com).
+2. **Visually verify** the resume + undo flow in a browser (`npm run dev`): stop a sleep, immediately start again → banner shows the same running session + "Resumed previous — Undo" toast; tap Undo → two separate sessions (old re-closed, new running). Repeat for breast feed. This is the manual check the deferred DX.1 loop would have automated.
+3. Then pick the next roadmap item (below).
+
+_Later / backlog:_
+- **DX.1 — Local visual-check loop** (still valuable; deprioritised this session). Steps in the [DX plan](docs/superpowers/plans/2026-07-05-developer-experience.md): export `AppShell` from `App.tsx` → `index.dev.html`/`main.dev.tsx` (skip `AuthGate`, keep pre-paint theme script, **never** in Vite `build.rollupOptions.input`) → `src/dev/fixture.ts` + `seedDevData()` (via `storage.ts`, anchored to `new Date()`) → Playwright `npm run shots` to gitignored `screenshots/`.
+- **DX.2 — Staging + test account** (backend-side) — see DX plan.
+- **Opportunistic H1** (behind Enabled Event Types): Growth (height/head circ), Pumping, free-text Note.
+- **Deferred (Phase 2 edge-function):** feed reminders' "last feed" must count *either* method server-side (`feed-reminder` Edge Function); client `getLastEventOfType(events,'feed')` already does.
 
 ## Context & decisions
+- **Task 1.6 — resume decision lives in storage, keyed off the pure helper.** The UI "start now" path builds the running event and used to call `addEvent` directly; it now routes through `startSleep`/`startBreastFeed`, which read `listEvents()` + `getResumableDurationEvent(...)` and either reopen or add. Keeping the decision in storage (not the sheet) means every entry point (Home, History) resumes consistently. **Breaking-ish:** `start*` now return `StartDurationResult`, not `number` — callers/tests destructure `{ id }`.
+- **Task 1.6 — undo intentionally does TWO things.** "Undo" re-closes the reopened row at its prior end *and* creates the genuinely-new session (`undoResume`). If it only restored the end, the user would be left with nothing running and re-tapping start would just resume again — a real double-nap would be unrecoverable. The Toast action carries the intended new-event payload (the `event` from the sheet) so undo can rebuild it.
+- **Task 1.6 — type-guard gotcha (cost a build round).** `.filter(kind === 'sleep' ? predA : predB)` does NOT narrow — a *union* of type-guard functions isn't usable as a guard, so the array stayed `BabyEvent[]` and `.endedAt` errored on `BottleFeedEvent`. Fix: a single `(e): e is SleepEvent | BreastFeedEvent => ...` predicate. Same lesson for `EventSheet.handleSave`: narrow `event.type` *before* reading `event.endedAt`.
 - **Task 1.4 — colours live in two worlds; CSS vars are the bridge.** Tailwind static classes (CSS-land) and `theme.ts` runtime hex (JS-land) both now resolve from the same `:root`/`.dark` custom properties. Any *new* colour must be added in **three** spots to stay in sync: the `:root` + `.dark` var blocks in `index.css`, and (if read at runtime) the `PALETTE_VARS`/`EVENT_VARS` maps in `theme.ts`. Note `eventColor.dose` reads `--meds` (the Tailwind colour is named `meds`, the event type is `dose`).
 - **Task 1.4 — why the palette objects are mutated, not React state.** ~20 files `import { palette, eventColor }` directly for SVG/chart fills and the `` `${col}55` `` alpha-concat idiom (which *requires* real hex, so these can't be `dark:` classes). Rewiring all of them to a hook was too invasive; instead `refreshPaletteFromCss()` mutates the objects in place and the ThemeProvider (mounted above `<App>` in `main.tsx`) re-renders the tree so consumers re-read. Gotcha: a plain mount `useEffect`+`setState` to force the re-read trips `react-hooks/set-state-in-effect` — solved by applying the palette *before* React renders (`initTheme()` in main.tsx) + a no-setState `useLayoutEffect` in the provider for self-sufficiency (tests).
 - **Task 1.4 — theme is device-only, deliberately not synced** (`localStorage['bt.theme']`, key mirrored in the index.html inline script). A bedside phone may want dark while the kitchen tablet stays light. `system` = remove the key (no override).

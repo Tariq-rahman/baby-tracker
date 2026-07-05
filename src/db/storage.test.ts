@@ -20,6 +20,7 @@ import {
   stopSleep,
   startBreastFeed,
   stopBreastFeed,
+  undoResume,
 } from './storage'
 import { DEFAULT_ENABLED_EVENT_TYPES } from './schema'
 import type { BreastFeedEvent, SleepEvent } from './schema'
@@ -98,7 +99,7 @@ describe('storage', () => {
 
   it('startSleep creates an open sleep row (endedAt null); stopSleep sets its end', async () => {
     const start = '2026-06-09T13:00:00.000Z'
-    const id = await startSleep(start)
+    const { id } = await startSleep(start)
 
     const open = (await db.events.get(id)) as SleepEvent
     expect(open.type).toBe('sleep')
@@ -114,7 +115,7 @@ describe('storage', () => {
 
   it('startBreastFeed creates an open breast feed (endedAt null); stopBreastFeed sets its end', async () => {
     const start = '2026-06-09T13:00:00.000Z'
-    const id = await startBreastFeed(start, 'left')
+    const { id } = await startBreastFeed(start, 'left')
 
     const open = (await db.events.get(id)) as BreastFeedEvent
     expect(open.type).toBe('feed')
@@ -127,6 +128,74 @@ describe('storage', () => {
     await stopBreastFeed(id, end)
     const stopped = (await db.events.get(id)) as BreastFeedEvent
     expect(stopped.endedAt).toBe(end)
+  })
+
+  // --- Duration-event resume (Task 1.6) ---
+  const minsAgo = (m: number) => new Date(Date.now() - m * 60_000).toISOString()
+
+  it('startSleep resumes a sleep that ended moments ago instead of adding a row', async () => {
+    const endedAt = minsAgo(1) // within the 5-min window
+    const seedId = await addEvent({ type: 'sleep', occurredAt: minsAgo(60), endedAt, createdAt: minsAgo(60) })
+
+    const before = (await listEvents()).length
+    const res = await startSleep(new Date().toISOString())
+
+    expect(res.resumed).toBe(true)
+    expect(res.id).toBe(seedId)
+    expect(res.previousEndedAt).toBe(endedAt)
+    expect((await listEvents()).length).toBe(before) // no new row
+    expect(((await db.events.get(seedId)) as SleepEvent).endedAt).toBeNull() // reopened
+  })
+
+  it('startSleep creates a new row when the last sleep ended outside the window', async () => {
+    await addEvent({ type: 'sleep', occurredAt: minsAgo(60), endedAt: minsAgo(10), createdAt: minsAgo(60) })
+
+    const res = await startSleep(new Date().toISOString())
+
+    expect(res.resumed).toBe(false)
+    expect((await listEvents()).length).toBe(2)
+  })
+
+  it('startBreastFeed resumes a just-ended nursing session by kind', async () => {
+    const endedAt = minsAgo(2)
+    const seedId = await addEvent({
+      type: 'feed',
+      method: 'breast',
+      side: 'right',
+      occurredAt: minsAgo(20),
+      endedAt,
+      createdAt: minsAgo(20),
+    })
+
+    const res = await startBreastFeed(new Date().toISOString(), 'left')
+
+    expect(res.resumed).toBe(true)
+    expect(res.id).toBe(seedId)
+    expect(((await db.events.get(seedId)) as BreastFeedEvent).endedAt).toBeNull()
+    expect(((await db.events.get(seedId)) as BreastFeedEvent).side).toBe('right') // keeps the session's side
+  })
+
+  it('undoResume restores the prior end and creates the genuinely-new session', async () => {
+    const endedAt = minsAgo(1)
+    const seedId = await addEvent({ type: 'sleep', occurredAt: minsAgo(60), endedAt, createdAt: minsAgo(60) })
+
+    const startIso = new Date().toISOString()
+    const res = await startSleep(startIso)
+    expect(res.resumed).toBe(true)
+
+    const newId = await undoResume(res.id, res.previousEndedAt!, {
+      type: 'sleep',
+      occurredAt: startIso,
+      endedAt: null,
+      createdAt: startIso,
+    })
+
+    expect(((await db.events.get(seedId)) as SleepEvent).endedAt).toBe(endedAt) // prior end restored
+    expect(newId).not.toBe(seedId)
+    const created = (await db.events.get(newId)) as SleepEvent
+    expect(created.endedAt).toBeNull() // the new session is now the running one
+    expect(created.occurredAt).toBe(startIso)
+    expect((await listEvents()).length).toBe(2) // two distinct sessions — a real double-nap
   })
 
   it('saves the singleton baby, stamps a uid, and preserves it across saves', async () => {

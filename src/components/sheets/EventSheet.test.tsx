@@ -20,6 +20,33 @@ describe('EventSheet', () => {
     expect((events[0] as { volumeMl: number }).volumeMl).toBe(100)
   })
 
+  it('resumes a just-ended sleep instead of adding a row, reporting it to onSaved', async () => {
+    const endedAt = new Date(Date.now() - 60_000).toISOString() // 1 min ago — within the window
+    const seedId = await db.events.add({
+      type: 'sleep',
+      occurredAt: new Date(Date.now() - 60 * 60_000).toISOString(),
+      endedAt,
+      createdAt: endedAt,
+    })
+
+    let reported: { resumed: boolean; id: number } | undefined
+    render(
+      <EventSheet
+        adding="sleep"
+        editing={null}
+        medications={[]}
+        onClose={() => {}}
+        onSaved={(_e, resume) => {
+          reported = resume
+        }}
+      />,
+    )
+    await userEvent.click(screen.getByRole('button', { name: /start sleep now/i }))
+
+    expect(await listEvents()).toHaveLength(1) // reopened, no new row
+    expect(reported).toEqual(expect.objectContaining({ resumed: true, id: seedId }))
+  })
+
   it('updates an event in edit mode', async () => {
     const id = await db.events.add({
       type: 'feed',
