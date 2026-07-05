@@ -53,7 +53,7 @@ This is the payoff of ADR-0003: adding to events is nearly free. Prefer riding t
 - **Soft delete only:** set `deletedAt`; every read filters `deletedAt == null` (do it in `storage.ts`).
 - **Tests:** all new pure logic gets Vitest tests (prefer table-driven); critical forms get RTL tests. Run via `npm test` (it sets `TZ=UTC` — required; do not use bare `npx vitest`).
 - **Docs are committed** in this repo (overrides the global "never commit plans" rule).
-- **Verification gate for every task:** `npx tsc --noEmit` · `npx vite build` · `npx eslint src/` · `npm test` — all green before moving on.
+- **Verification gate for every task:** `npm run build` · `npx eslint src/` · `npm test` — all green before moving on. Use **`npm run build`** (it runs `tsc -b && vite build`), NOT `npx tsc --noEmit` — the project-references build (`tsc -b`) is stricter and catches errors `--noEmit` misses (e.g. interface-vs-`Record` index-signature mismatches).
 - **Work in small PRs, one task at a time.** Update this file's status markers as you go.
 
 ---
