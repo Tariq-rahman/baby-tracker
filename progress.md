@@ -1,6 +1,6 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 · Branch: feat/insight-strategy-scaffold @ 6f30776 · (no PR yet)_
+_Updated: 2026-07-05 · Branch: feat/insight-strategy-scaffold @ 7c2363c · PR #13_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning is committed on `main`.
@@ -19,7 +19,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - Tests: `baseline.test.ts` (window bounds, gate, baseline math, variance suppression) + `strategy.test.ts` (reference strategy end-to-end through the contract).
 
 ## Next
-1. **Open a PR for Task 0.2** (`feat/insight-strategy-scaffold` → main), or fold it into the H0 work — user's call. Then merge.
+1. **Review/merge PR #13** (Task 0.2, `feat/insight-strategy-scaffold` → main).
 2. **H1 Task 1.1 — Breastfeeding (ADR-0007), the priority item.** `FeedEvent` gets `method: 'bottle' | 'breast'`; breast reuses the Sleep duration shape (`endedAt: string | null`, `side`), no `volumeMl`. All in `payload` — **no server migration**. Mapping defaults legacy feeds to `bottle`. `storage.ts` `startBreastFeed`/`stopBreastFeed` mirroring sleep. UI: bottle-vs-breast pick + live timer/running banner; one running breast feed at a time. **Insight code must branch on method — never read a breast feed's absent volume as 0.** See plan §"Task 1.1".
 3. Then Task 1.2 (Trends view), 1.3 (first reflective insights — concrete strategies against the 0.2 scaffold).
 
