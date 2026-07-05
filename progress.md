@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 12:20 · Branch: main @ 4e538fc · Task 1.2 MERGED + visually verified, Task 1.3 next_
+_Updated: 2026-07-05 14:45 · Branch: feat/insights @ 2420bee · Task 1.3 IMPLEMENTED, PR #16 open (awaiting review/merge + visual verify)_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.2 (Trends view) is DONE and MERGED to `main`** (PR #15, merge `4e538fc`) and visually verified by the user. Working tree clean, on `main`. Full gate was green (build, eslint, 215 tests incl. 13 new). The `/trends` page has per-metric small-multiple cards (feeds, sleep, nappies, doses), a 7d/30d/All window selector, and a dashed baseline reference line per card; Weight is a card linking to the retained `/weight` page; the bottom-nav "Weight" tab is now "Trends". Insight strategies + "not enough data" copy are deferred to Task 1.3 (each card has an `insight` slot; feed card shows factual avg ml/nursing-min as a placeholder). Nothing in flight — next is Task 1.3 on a fresh branch off `main`.
+**H1 Task 1.3 (first reflective insights) is IMPLEMENTED and pushed — PR #16 open, not yet merged.** On branch `feat/insights` (commit `2420bee`). Full gate green: `npm run build`, `eslint`, **236 tests** (+21 new). The Trends **feed** card's `insight` slot now renders real reflective insights (bottle-volume vs baseline, breast-nursing vs baseline, confidence-gated next-feed prediction), replacing the placeholder avg text. **Next: get PR #16 reviewed + merged, then visually verify with real data** (as with Task 1.2). After merge, checkpoint on `main` and move to Task 1.4 (dark mode).
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -18,12 +18,23 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - `mapping.ts` branches on method, defaults no-method payloads to bottle. `storage.ts` `startBreastFeed`/`stopBreastFeed`. `stats.ts` NaN guard + `getRunningBreastFeed`/`isFlaggedBreastFeed`/`nursingMinutesForDay`/`isBreastFeed`.
   - UI: `FeedSheet` (bottle/breast toggle) wraps body-only `BottleSheet` + new `BreastSheet` (timer + side chips). `RunningSleepBanner` → generic `RunningBanner`; both sleep and breast-feed banners render. One running breast feed enforced.
   - +13 tests (mapping legacy default, breast round-trips, storage start/stop, nursing aggregation, running/flag detection, feedCount-not-volume). Suite 202, all green.
+- **H1 Task 1.2 — Trends view** — MERGED (PR #15, merge `4e538fc`), visually verified. Per-metric small-multiple cards + 7d/30d/All selector + dashed baseline line; Weight is a card linking to `/weight`; nav "Weight"→"Trends". +13 tests.
+- **H1 Task 1.3 — First reflective insights** — IMPLEMENTED, PR #16 open (`2420bee`), not merged:
+  - `src/lib/insights/strategies.ts`: `bottleVolumeStrategy` (today ml vs own N-day daily avg), `breastNursingStrategy` (today nursing-min vs baseline; running/flagged = 0), `nextFeedStrategy` (confidence-gated prediction, either method). `listFeedStrategies()` builds all three w/ `DEFAULT_FEED_CONFIG`.
+  - Each self-gates: **silent** if method unused, **"keep logging"** (insufficient-data) if used-but-sparse, **comparative fact** once gate (3d + 5 events / 7d window) met.
+  - New baseline helpers: `localDay`, `todaySum`, `compareDirection` (±tol band → only `below`/`above`/`about the same as`).
+  - `InsightList.tsx` renders facts into the feed `TrendCard` slot (muted for insufficient-data, 🕐 for prediction). +21 tests, suite 236.
 
 ## Next
-1. **H1 Task 1.3 — First reflective insights** (see plan §"Task 1.3"). Branch off `main` (`feat/insights`). Implement concrete strategies against the 0.2 scaffold (`src/lib/insights/`): volume-vs-baseline (bottle), frequency/nursing-min-vs-baseline (breast), confidence-gated next-feed prediction. Render into the **insight slot already on each `TrendCard`** (`insight` prop) + honest "not enough data yet" state. Copy rules ADR-0005 (no "enough"/"normal"/"should"; optional "worth mentioning to your pediatrician" hand-off only).
-2. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
+1. **Get PR #16 merged** (review, then merge to `main`). After merge: checkpoint `progress.md` on `main`, then **visually verify** the feed card insights render sensibly against real data.
+2. **H1 Task 1.4 — Dark mode** (see plan §"Task 1.4"). Fresh branch off `main`.
+3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
+- **Task 1.3 gating decision:** a strategy returns `[]` (silent) when its method has *zero* events, vs `insufficient-data` ("keep logging") when the method is used but below the sufficiency gate. So a bottle-only family never sees an empty "not enough nursing data" line. Distinction: empty = "you don't do this"; insufficient-data = "you do this, not enough history yet".
+- **Task 1.3 baseline window is fixed 7d** (`DEFAULT_FEED_CONFIG`), independent of the Trends page's 7d/30d/All chart selector — the baseline is the baby's own recent normal (ADR-0006), not the viewed range.
+- **Task 1.3 copy safety:** `compareDirection` only ever emits `below`/`above`/`about the same as`; a test asserts facts never contain `enough`/`normal`/`should`/`ok` (ADR-0005). Copy is authored in the strategies, never in `InsightList`.
+- **Task 1.3 today-vs-baseline both keyed by `occurredAt`'s local day** (`todaySum` + `dailyBaseline`), so a midnight-spanning nursing session is attributed to its start day consistently on both sides (no per-day clipping like `nursingMinutesForDay`). Prediction counts feeds of *either* method (matches client `getLastEventOfType`).
 - **Task 1.2 nav decision:** replaced the bottom-nav "Weight" tab with "Trends" (chose the recommended option; user was away for the AskUserQuestion). `/weight` route is *kept* (not in the tab bar) — reached by tapping the Trends weight card; WeightPage gained a "← Trends" back link. All weight CRUD stays on `/weight` (didn't cram it into a card).
 - **Task 1.2 scope decision:** built page+cards+window+baseline only; deferred real insight strategies to 1.3 (recommended option). `TrendCard` has an `insight?: ReactNode` slot ready to fill.
 - **Trends aggregation reuses the audited single-day helpers** (`getDailyTotals`/`sleepMinutesForDay`/`nursingMinutesForDay`) per day — so breast feeds count toward frequency without their absent volume being read, and duration events clip per day. `src/lib/trends.ts` is pure + fully tested (13 tests); the UI just maps its output into Recharts `BarChart`s.
@@ -38,6 +49,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
 ## Key files & links
 - Plan (start here): [2026-07-03-roadmap-implementation.md](docs/superpowers/plans/2026-07-03-roadmap-implementation.md)
 - ADR: [0007 breast feed as a feed method](docs/adr/0007-breast-feed-as-feed-method-reusing-duration-pattern.md) · [0006 insights baseline](docs/adr/0006-insight-data-sufficiency-and-baseline.md) · [0005 reflective line](docs/adr/0005-reflective-insights-mirror-not-doctor.md)
+- Task 1.3 files: [strategies.ts](src/lib/insights/strategies.ts) + [strategies.test.ts](src/lib/insights/strategies.test.ts) (the 3 concrete strategies) · [baseline.ts](src/lib/insights/baseline.ts) (added `localDay`/`todaySum`/`compareDirection`) · [InsightList.tsx](src/components/InsightList.tsx) · [TrendsPage.tsx](src/pages/TrendsPage.tsx:56) (runs strategies, feeds the card slot)
 - Task 1.2 files: [trends.ts](src/lib/trends.ts) + [trends.test.ts](src/lib/trends.test.ts) (pure aggregation) · [TrendCard.tsx](src/components/TrendCard.tsx) (small-multiple card, has the `insight` slot) · [TrendsPage.tsx](src/pages/TrendsPage.tsx) · [App.tsx](src/App.tsx) (nav+route swap) · [WeightPage.tsx](src/pages/WeightPage.tsx:38) (back link)
 - Task 1.1 shipped files: [schema.ts](src/db/schema.ts) · [mapping.ts](src/lib/sync/mapping.ts) · [storage.ts](src/db/storage.ts) · [stats.ts](src/lib/stats.ts) · [FeedSheet.tsx](src/components/sheets/FeedSheet.tsx) · [BreastSheet.tsx](src/components/sheets/BreastSheet.tsx) · [RunningBanner.tsx](src/components/RunningBanner.tsx)
 - Insight scaffold (reference for 1.3): [types.ts](src/lib/insights/types.ts) · [baseline.ts](src/lib/insights/baseline.ts)
