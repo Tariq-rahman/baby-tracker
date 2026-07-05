@@ -141,7 +141,7 @@ _Goal: ship breastfeeding (gates audience C), turn History into Trends with the 
 
 ### Opportunistic in H1 (cheap, toggled) — do if convenient
 
-- **Growth** (height / head circumference): new event type, sibling of Weight, same chart primitive. Behind Enabled Event Types.
+- **Growth** (height / head circumference): ✅ DONE (PR #22). New event type, sibling of Weight, same chart primitive. Opt-in (not in `DEFAULT_ENABLED_EVENT_TYPES`); one event carries optional `heightMm`/`headCircumferenceMm` (mm integers), cm/in toggle.
 - **Pumping**: duration + volume event. Behind the toggle.
 - **Free-text Note**: deliberately minimal timestamped note; guard against scope creep.
 
