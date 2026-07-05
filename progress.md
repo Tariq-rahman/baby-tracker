@@ -1,101 +1,34 @@
-# Progress: Roadmap implementation
+# Progress: DX.1 shipped — pick next (DX.2, opportunistic H1, or H2)
+_Updated: 2026-07-05 18:15 · Branch: feat/dx1-visual-check-loop (cddce44) · DX.1 committed, not yet pushed/PR'd_
 
-_Updated: 2026-07-05 19:05 · Branch: main (05806c3) · Task 1.6 MERGED (PR #20); gate green; next = visually verify_
+Shipped: H1 complete (PRs #12–#20) + H1 docs graduated to ADRs 0009/0010 (commit 913e0c5). **DX.1 local visual-check loop done & verified** (commit cddce44, branch not yet pushed). Now: open the DX.1 PR, then choose the next unit of work.
 
 ## Goal
-Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). The **DX phase** (visual-check loop) was planned but **deprioritised** this session in favour of shipping **H1 Task 1.6 — Duration-event resume**.
+DX.1 (headless visual-check loop) is code-complete, verified, and committed. Definition-of-done for the immediate step: get DX.1 merged, then pick the next roadmap item.
 
 ## Status
-**H1 Task 1.6 (Duration-event resume) is DONE & MERGED** ([PR #20](https://github.com/Tariq-rahman/baby-tracker/pull/20), merge `05806c3`, feature `46cbeea`). Gate green: `npm run build` ✓, `npx eslint src/` clean, **276 tests** (+12). ⚠️ **Not visually verified** — this env has no browser automation (the deferred DX.1 was meant to fix exactly that); eyeball the resume + undo flow in `npm run dev`. DX.1 (visual-check loop) was scoped/planned but not built; its branch `feat/dx-visual-check-loop` has no commits.
-(Task 1.5 Settings sections: DONE & MERGED — [PR #19](https://github.com/Tariq-rahman/baby-tracker/pull/19), merge `d4cf61f`. Task 1.4 dark mode: MERGED & VERIFIED — PR #18.)
-
-## Done
-- **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
-- **H0 Task 0.1 — Enabled Event Types** — merged (PR #12). Migration `0009_baby_settings.sql` applied to remote.
-- **H0 Task 0.2 — Insight strategy scaffold** — merged (PR #13, `6f30776`), pure logic, no UI. `src/lib/insights/` baseline helpers + runner; thresholds/windows are strategy params.
-- **Migration ledger reconciled** — `0008_cron_auth_key` backfilled (version `20260702184527`); ledger contiguous `0001`–`0009`; cron healthy.
-- **H1 Task 1.1 — Breastfeeding (ADR-0007)** — MERGED (PR #14, merge `35be98d`; feature commit `05bcb7c`):
-  - `FeedEvent` is now a discriminated union: `BottleFeedEvent` (`method?: 'bottle'`, `volumeMl`+`content`) | `BreastFeedEvent` (`method: 'breast'`, `side`, `endedAt`). `method` optional on bottle ⇒ **legacy rows read as bottles, no Dexie/server migration**; all in `payload`.
-  - `mapping.ts` branches on method, defaults no-method payloads to bottle. `storage.ts` `startBreastFeed`/`stopBreastFeed`. `stats.ts` NaN guard + `getRunningBreastFeed`/`isFlaggedBreastFeed`/`nursingMinutesForDay`/`isBreastFeed`.
-  - UI: `FeedSheet` (bottle/breast toggle) wraps body-only `BottleSheet` + new `BreastSheet` (timer + side chips). `RunningSleepBanner` → generic `RunningBanner`; both sleep and breast-feed banners render. One running breast feed enforced.
-  - +13 tests (mapping legacy default, breast round-trips, storage start/stop, nursing aggregation, running/flag detection, feedCount-not-volume). Suite 202, all green.
-- **H1 Task 1.2 — Trends view** — MERGED (PR #15, merge `4e538fc`), visually verified. Per-metric small-multiple cards + 7d/30d/All selector + dashed baseline line; Weight is a card linking to `/weight`; nav "Weight"→"Trends". +13 tests.
-- **H1 Task 1.3 — First reflective insights** — MERGED (PR #16, merge `2c2bb86`; feature `2420bee`):
-  - `src/lib/insights/strategies.ts`: `bottleVolumeStrategy` (today ml vs own N-day daily avg), `breastNursingStrategy` (today nursing-min vs baseline; running/flagged = 0), `nextFeedStrategy` (confidence-gated prediction, either method). `listFeedStrategies()` builds all three w/ `DEFAULT_FEED_CONFIG`.
-  - Each self-gates: **silent** if method unused, **"keep logging"** (insufficient-data) if used-but-sparse, **comparative fact** once gate (3d + 5 events / 7d window) met.
-  - New baseline helpers: `localDay`, `todaySum`, `compareDirection` (±tol band → only `below`/`above`/`about the same as`).
-  - `InsightList.tsx` renders facts into the feed `TrendCard` slot (muted for insufficient-data, 🕐 for prediction). +21 tests, suite 236.
-- **H1 Task 1.3 fix — honest insights against live data** — MERGED (PR #17, merge `1aeb4d3`, fix `65dcc6b`). Live data exposed two bugs, both fixed:
-  - **Baseline understated by phantom days.** `dailyBaseline` divided by `windowDays` (7) unconditionally, so pre-tracking days counted as `0` and dragged the mean down (showed "236 ml/day"). Now `completeDayBaseline` + `assessCompleteCoverage` **withhold the comparison until the first feed of that method is a full window old** (`hasFullHistory`); until then the muted "keep logging" state shows.
-  - **Compared an in-progress day.** Was `todaySum` vs baseline → a partial day always read "below". Now compares **yesterday** (`lastCompleteDay` + `daySum`) vs a baseline over **complete days only** (today excluded from both). Copy: "Yesterday's bottles (X ml) were …".
-  - `FeedInsightConfig.gate` → `minEvents` (full-window history is the binding gate). +10 tests, suite 246.
-
-- **H1 Task 1.4 — Dark mode** — PR #18 open (`feat/dark-mode`, `45716e9`):
-  - **Single source of truth = CSS custom properties** in `src/index.css` (`:root` light / `.dark` dark), incl. the body radial-gradient (`--app-bg`). `tailwind.config.js` → `darkMode: 'class'` + named colours point at `var(--…)`.
-  - `theme.ts` keeps the same importable `palette`/`eventColor` objects (mutated in place, never reassigned → ~20 consumers untouched); `refreshPaletteFromCss()` re-reads the resolved vars via `getComputedStyle` on every theme flip. The alpha-tint idiom (`` `${col}55` ``) still works because values stay real hex.
-  - `src/lib/theme-context.ts` (pure helpers + context + `useTheme` — split out so `ThemeProvider.tsx` only exports a component, satisfying `react-refresh/only-export-components`) + `ThemeProvider.tsx`. Persists override to **device-only** `localStorage['bt.theme']` (NOT synced). Follows `prefers-color-scheme` live while on *system*.
-  - `index.html` inline script sets `.dark` + `meta[theme-color]` **before first paint** (no flash); `main.tsx` calls `initTheme()` before render so the JS palette matches the stylesheet on first paint.
-  - Settings → **Appearance** card (Light/Dark/System segmented control). Fixed hardcoded hex that duplicated palette values (EventList/WeightPage row borders, Trends/Weight chevrons, Header avatar gradient).
-  - +18 tests (resolveTheme/readStoredChoice tables + ThemeProvider behaviour), suite 246 → 264.
-
-- **H1 Task 1.5 — Settings restructure (light)** — PR #19 open (`feat/settings-sections`, `37a4fdb`). New `Section` wrapper (muted uppercase header) groups related cards; `Card` title now optional (single-card sections drop the redundant title). Grouped: Baby+Sharing → Baby & Household; Event types (renamed from "Tracking") + Medications → Tracking; Feed reminders → Notifications; theme → Appearance; backup → Data; sign-out → Account. Pure `SettingsPage.tsx` restructure, no behaviour change. Suite still 264.
-
-- **DX phase — grilled & planned** (not built). New plan [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md) + a DX section in ROADMAP.md. Settled: AI visual-check loop runs **local, no backend**; login bypass = **separate dev entry** (`main.dev.tsx`/`index.dev.html`) absent from the prod build; **Playwright `npm run shots`** (eyes, no CI); **one shared TS fixture** seeds Dexie + staging; **dedicated staging Supabase + Vercel previews**, prod never the test target; staging test account = **real inbox + magic link** (no password auth).
-
-- **H1 Task 1.6 — Duration-event resume** — MERGED (PR #20, merge `05806c3`; feature `46cbeea`):
-  - A **Duration Event** = sleep OR breast feed. Starting one now reopens the most-recently-*ended* session of that kind if it ended within **`RESUME_WINDOW_MS` (5 min)** — an accidental stop-then-restart is one interrupted session, not two.
-  - `stats.ts`: pure `getResumableDurationEvent(events, kind, now, windowMs)` (`kind: 'sleep'|'breast'`; picks the latest `endedAt`, ignores running + future-dated ends). `storage.ts`: `startSleep`/`startBreastFeed` are now resume-aware and return `StartDurationResult {id, resumed, previousEndedAt}` (was `Promise<number>`); reopening keeps the original `occurredAt` + side.
-  - **Undo = re-close the reopened row at its prior end AND create the genuinely-new session** (`undoResume(id, previousEndedAt, newEvent)`) — the only reading where "a genuine double-nap is recoverable" holds in one tap.
-  - Wiring: `EventSheet.handleSave` routes the *start-now* path (adding, `endedAt == null`, sleep or breast) through the helpers and bubbles the result via `onSaved(event, resume?)`. `Toast` gained an optional inline `action` button; `HomePage.showToast` shows "Resumed previous — Undo" (5s) and wires undo.
-  - +12 tests (pure helper 8, storage resume/new/undo 4, EventSheet routing 1; existing start* tests updated to destructure `{id}`). Suite 264 → 276.
-
-## Done (out of roadmap — bug fixes on main)
-- **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
+**DX.1 DONE & VERIFIED**, committed on `feat/dx1-visual-check-loop` (not pushed — `git push`/`gh` need the sandbox disabled here). Ran `npm run shots` end-to-end: all 5 screens render seeded in light + dark, reflective insights fire, weight chart draws. Gate green: `npm run build` ✓, eslint ✓, **276 tests** ✓. Prod `dist/` confirmed free of dev-entry code (SECURITY req).
 
 ## Next
-1. **Visually verify** Task 1.6's resume + undo flow in a browser (`npm run dev`): stop a sleep, immediately start again → banner shows the same running session + "Resumed previous — Undo" toast; tap Undo → two separate sessions (old re-closed, new running). Repeat for breast feed. This is the manual check the deferred DX.1 loop would have automated.
-2. Then pick the next roadmap item (below) — either **DX.1** (unblocks all future visual checks) or an **opportunistic H1** feature.
+1. **Push the branch + open the DX.1 PR** (needs sandbox disabled for TLS to github.com). Then merge.
+2. Then pick the next unit of work (see _Later_).
 
-_Later / backlog:_
-- **DX.1 — Local visual-check loop** (still valuable; deprioritised this session). Steps in the [DX plan](docs/superpowers/plans/2026-07-05-developer-experience.md): export `AppShell` from `App.tsx` → `index.dev.html`/`main.dev.tsx` (skip `AuthGate`, keep pre-paint theme script, **never** in Vite `build.rollupOptions.input`) → `src/dev/fixture.ts` + `seedDevData()` (via `storage.ts`, anchored to `new Date()`) → Playwright `npm run shots` to gitignored `screenshots/`.
-- **DX.2 — Staging + test account** (backend-side) — see DX plan.
-- **Opportunistic H1** (behind Enabled Event Types): Growth (height/head circ), Pumping, free-text Note.
-- **Deferred (Phase 2 edge-function):** feed reminders' "last feed" must count *either* method server-side (`feed-reminder` Edge Function); client `getLastEventOfType(events,'feed')` already does.
+_Later / choose from:_
+- **DX.2 — Staging + test account** (backend-side) — dedicated staging Supabase project + Vercel preview wiring + `npm run seed:staging` reusing `src/dev/fixture.ts`. See DX plan tasks DX.2.1–DX.2.3. Has a (free-tier) cloud footprint.
+- **Opportunistic H1** behind Enabled Event Types: Growth (height/head circ), Pumping, free-text Note.
+- **H2** — the smart layer (see roadmap plan).
 
-## Context & decisions
-- **Task 1.6 — resume decision lives in storage, keyed off the pure helper.** The UI "start now" path builds the running event and used to call `addEvent` directly; it now routes through `startSleep`/`startBreastFeed`, which read `listEvents()` + `getResumableDurationEvent(...)` and either reopen or add. Keeping the decision in storage (not the sheet) means every entry point (Home, History) resumes consistently. **Breaking-ish:** `start*` now return `StartDurationResult`, not `number` — callers/tests destructure `{ id }`.
-- **Task 1.6 — undo intentionally does TWO things.** "Undo" re-closes the reopened row at its prior end *and* creates the genuinely-new session (`undoResume`). If it only restored the end, the user would be left with nothing running and re-tapping start would just resume again — a real double-nap would be unrecoverable. The Toast action carries the intended new-event payload (the `event` from the sheet) so undo can rebuild it.
-- **Task 1.6 — type-guard gotcha (cost a build round).** `.filter(kind === 'sleep' ? predA : predB)` does NOT narrow — a *union* of type-guard functions isn't usable as a guard, so the array stayed `BabyEvent[]` and `.endedAt` errored on `BottleFeedEvent`. Fix: a single `(e): e is SleepEvent | BreastFeedEvent => ...` predicate. Same lesson for `EventSheet.handleSave`: narrow `event.type` *before* reading `event.endedAt`.
-- **Task 1.4 — colours live in two worlds; CSS vars are the bridge.** Tailwind static classes (CSS-land) and `theme.ts` runtime hex (JS-land) both now resolve from the same `:root`/`.dark` custom properties. Any *new* colour must be added in **three** spots to stay in sync: the `:root` + `.dark` var blocks in `index.css`, and (if read at runtime) the `PALETTE_VARS`/`EVENT_VARS` maps in `theme.ts`. Note `eventColor.dose` reads `--meds` (the Tailwind colour is named `meds`, the event type is `dose`).
-- **Task 1.4 — why the palette objects are mutated, not React state.** ~20 files `import { palette, eventColor }` directly for SVG/chart fills and the `` `${col}55` `` alpha-concat idiom (which *requires* real hex, so these can't be `dark:` classes). Rewiring all of them to a hook was too invasive; instead `refreshPaletteFromCss()` mutates the objects in place and the ThemeProvider (mounted above `<App>` in `main.tsx`) re-renders the tree so consumers re-read. Gotcha: a plain mount `useEffect`+`setState` to force the re-read trips `react-hooks/set-state-in-effect` — solved by applying the palette *before* React renders (`initTheme()` in main.tsx) + a no-setState `useLayoutEffect` in the provider for self-sufficiency (tests).
-- **Task 1.4 — theme is device-only, deliberately not synced** (`localStorage['bt.theme']`, key mirrored in the index.html inline script). A bedside phone may want dark while the kitchen tablet stays light. `system` = remove the key (no override).
-- **Task 1.4 — a few overlays stay theme-agnostic on purpose:** the Toast is a fixed dark chip (white text needs a dark bg in *both* themes — switching it to `palette.ink` would make it off-white in dark and break contrast) and the sheet scrim is a dimming layer. Left hardcoded intentionally.
-- **Task 1.3 gating decision:** a strategy returns `[]` (silent) when its method has *zero* events, vs `insufficient-data` ("keep logging") when the method is used but below the sufficiency gate. So a bottle-only family never sees an empty "not enough nursing data" line. Distinction: empty = "you don't do this"; insufficient-data = "you do this, not enough history yet".
-- **Task 1.3 baseline window is fixed 7d** (`DEFAULT_FEED_CONFIG`), independent of the Trends page's 7d/30d/All chart selector — the baseline is the baby's own recent normal (ADR-0006), not the viewed range.
-- **Task 1.3 copy safety:** `compareDirection` only ever emits `below`/`above`/`about the same as`; a test asserts facts never contain `enough`/`normal`/`should`/`ok` (ADR-0005). Copy is authored in the strategies, never in `InsightList`.
-- **Task 1.3 compares YESTERDAY, not today** (fixed in #17): today is in-progress, so a partial day vs a daily average always reads "below". `completeDayBaseline` averages complete days only (today excluded); `daySum(lastCompleteDay(now))` is the comparison target. Both sides key on `occurredAt`'s local day (midnight-spanning session attributed to its start day). Prediction counts feeds of *either* method (matches client `getLastEventOfType`).
-- **Task 1.3 gate is "a full week of real history", not N distinct days** (fixed in #17): `dailyBaseline` divides by `windowDays` unconditionally, so pre-tracking days are phantom `0`s. `assessCompleteCoverage.hasFullHistory` (first-ever feed of the method ≤ window start) is the binding gate; `minEvents` only guards degenerate cases. #1 gotcha: any "average over a fixed window" that divides by the window length is wrong until history fills the window.
-- **Task 1.2 nav decision:** replaced the bottom-nav "Weight" tab with "Trends" (chose the recommended option; user was away for the AskUserQuestion). `/weight` route is *kept* (not in the tab bar) — reached by tapping the Trends weight card; WeightPage gained a "← Trends" back link. All weight CRUD stays on `/weight` (didn't cram it into a card).
-- **Task 1.2 scope decision:** built page+cards+window+baseline only; deferred real insight strategies to 1.3 (recommended option). `TrendCard` has an `insight?: ReactNode` slot ready to fill.
-- **Trends aggregation reuses the audited single-day helpers** (`getDailyTotals`/`sleepMinutesForDay`/`nursingMinutesForDay`) per day — so breast feeds count toward frequency without their absent volume being read, and duration events clip per day. `src/lib/trends.ts` is pure + fully tested (13 tests); the UI just maps its output into Recharts `BarChart`s.
-- **Baseline is rendered as a dashed `ReferenceLine` at the series mean** (`seriesMean`), not a full ±σ band. The richer baseline visual is tied to the insight strategies in 1.3.
-- **Insight/aggregation code must branch on `method` — never read a breast feed's absent `volumeMl` as 0/NaN.** `getDailyTotals` now counts a breast feed toward `feedCount` but skips its volume. Volume insights stay bottle-only; breastfeeding gets frequency / nursing-minutes. #1 gotcha for Task 1.3.
-- **Breast feed reuses the Sleep duration pattern verbatim** (ADR-0003/0007): running row has `endedAt: null`, stop = one update. Running breast feed and running sleep are independent; only one running breast feed at a time. Chose a **3h "forgotten" flag** for nursing (vs 18h sleep) — nursing rarely runs hours.
-- **Prediction uses a shorter window than the baseline** (`predictNext` samples all intervals; a 7-day window makes day-gaps look erratic). Baseline over 7d, predict off ~1d — see `strategy.test.ts`.
-- **`dailyBaseline` divides by calendar days** — 0-event days count as 0; sufficiency gate guards sparse cold-start.
-- **Enabled Event Types live as `jsonb` on the baby row** (ADR-0004); `saveBaby` must preserve `settings` on any baby-row edit.
-- **`progress.md` is committed in this repo** (project CLAUDE.md overrides the resume default).
+## Context & decisions (this task only)
+- **`npm run shots` needs Chromium + the sandbox off.** One-time: `npx playwright install chromium`. The browser won't launch inside the command sandbox (Mach-port EPERM) — run shots with the sandbox disabled.
+- The dev entry drives routes via `pushState` + a manual `popstate` (React Router listens for it), so non-nav routes like `/weight` screenshot fine.
+- `seedDevData()` clears the store each load (idempotent) and anchors the fixture to `new Date()`, so every run is fresh and current — screenshots are for eyeballing, not pixel-diffing (DX plan decision 4).
+- (When DX.1 merges, the harness "how it works" is worth a short note in the DX plan/README rather than here.)
 
 ## Key files & links
-- Plan (start here): [2026-07-03-roadmap-implementation.md](docs/superpowers/plans/2026-07-03-roadmap-implementation.md)
-- DX plan (tooling): [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md) · roadmap "DX" section
-- ADR: [0007 breast feed as a feed method](docs/adr/0007-breast-feed-as-feed-method-reusing-duration-pattern.md) · [0006 insights baseline](docs/adr/0006-insight-data-sufficiency-and-baseline.md) · [0005 reflective line](docs/adr/0005-reflective-insights-mirror-not-doctor.md)
-- Task 1.4 files: [theme.ts](src/lib/theme.ts) (mutable palette + `refreshPaletteFromCss`) · [theme-context.ts](src/lib/theme-context.ts) (helpers + `useTheme` + `initTheme`) · [ThemeProvider.tsx](src/lib/ThemeProvider.tsx) · [index.css](src/index.css) (`:root`/`.dark` vars) · [tailwind.config.js](tailwind.config.js) · [index.html](index.html) (pre-paint script) · [SettingsPage.tsx](src/pages/SettingsPage.tsx) (Appearance card) · PR #18
-- Task 1.3 files: [strategies.ts](src/lib/insights/strategies.ts) + [strategies.test.ts](src/lib/insights/strategies.test.ts) (the 3 concrete strategies) · [baseline.ts](src/lib/insights/baseline.ts) (added `localDay`/`todaySum`/`compareDirection`) · [InsightList.tsx](src/components/InsightList.tsx) · [TrendsPage.tsx](src/pages/TrendsPage.tsx:56) (runs strategies, feeds the card slot)
-- Task 1.2 files: [trends.ts](src/lib/trends.ts) + [trends.test.ts](src/lib/trends.test.ts) (pure aggregation) · [TrendCard.tsx](src/components/TrendCard.tsx) (small-multiple card, has the `insight` slot) · [TrendsPage.tsx](src/pages/TrendsPage.tsx) · [App.tsx](src/App.tsx) (nav+route swap) · [WeightPage.tsx](src/pages/WeightPage.tsx:38) (back link)
-- Task 1.1 shipped files: [schema.ts](src/db/schema.ts) · [mapping.ts](src/lib/sync/mapping.ts) · [storage.ts](src/db/storage.ts) · [stats.ts](src/lib/stats.ts) · [FeedSheet.tsx](src/components/sheets/FeedSheet.tsx) · [BreastSheet.tsx](src/components/sheets/BreastSheet.tsx) · [RunningBanner.tsx](src/components/RunningBanner.tsx)
-- Insight scaffold (reference for 1.3): [types.ts](src/lib/insights/types.ts) · [baseline.ts](src/lib/insights/baseline.ts)
+- DX.1 in-play: [App.tsx](src/App.tsx) (`AppShell` export) · [main.dev.tsx](src/main.dev.tsx) + [index.dev.html](index.dev.html) (dev entry, NOT a prod build input) · [fixture.ts](src/dev/fixture.ts) + [seed.ts](src/dev/seed.ts) · [shots.mjs](scripts/shots.mjs)
+- _Always:_ [roadmap plan](docs/superpowers/plans/2026-07-03-roadmap-implementation.md) · [DX plan](docs/superpowers/plans/2026-07-05-developer-experience.md) (DX.1 ✅, DX.2 next) · [CONTEXT.md](CONTEXT.md) · [ADRs](docs/adr/)
 
 ## Verify & run
-- Gate (all must pass): **`npm run build`** (= `tsc -b && vite build` — NOT `npx tsc --noEmit`, which misses errors) · `npx eslint src/` · `npm test` (sets `TZ=UTC`).
-- App: `npm run dev`. `gh` / `git push` need the sandbox disabled (env blocks TLS to github.com).
+- Gate (all must pass): **`npm run build`** (= `tsc -b && vite build`) · `npx eslint src/` · `npm test` (sets `TZ=UTC`).
+- Visual check: **`npm run shots`** → PNGs in gitignored `screenshots/` (open with Read tool). Needs Chromium installed + sandbox disabled.
+- App: `npm run dev` then open `/index.dev.html` for the seeded, auth-free shell. `gh` / `git push` need the sandbox disabled (env blocks TLS to github.com).
