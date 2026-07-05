@@ -1,8 +1,15 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { useBaby } from '../hooks/useBaby'
+import { useBaby, useEnabledEventTypes } from '../hooks/useBaby'
 import { useMedications } from '../hooks/useEvents'
-import { saveBaby, addMedication, deleteMedication, exportAll, importAll } from '../db/storage'
+import {
+  saveBaby,
+  addMedication,
+  deleteMedication,
+  setEnabledEventTypes,
+  exportAll,
+  importAll,
+} from '../db/storage'
 import { serializeBackup, parseBackup } from '../lib/backup'
 import { signOut } from '../lib/auth'
 import { createInvite, acceptInvite, buildInviteLink, parseInviteCode } from '../lib/invites'
@@ -14,10 +21,43 @@ import {
   setReminderInterval,
   DEFAULT_INTERVAL_MINUTES,
 } from '../lib/push'
-import { eventColor, palette } from '../lib/theme'
-import type { MedicationUnit } from '../db/schema'
+import { eventColor, eventLabel, palette } from '../lib/theme'
+import type { EventType, MedicationUnit } from '../db/schema'
 
 const UNITS: MedicationUnit[] = ['ml', 'mg', 'IU', 'drops']
+
+// Types with a quick-log button on the home screen. Weight is tracked from its own
+// page, so it isn't toggled here; setEnabledEventTypes preserves it regardless.
+const TOGGLEABLE_TYPES: EventType[] = ['feed', 'nappy', 'dose', 'sleep']
+
+function TrackingCard() {
+  const enabled = useEnabledEventTypes()
+  const toggle = (t: EventType, on: boolean) => {
+    const next = on ? [...enabled.filter((x) => x !== t), t] : enabled.filter((x) => x !== t)
+    void setEnabledEventTypes(next)
+  }
+  return (
+    <Card title="Tracking">
+      <p className="mb-3 text-sm text-inkSoft">
+        Choose what to track. Turning something off hides its log button — your past entries stay.
+      </p>
+      <ul className="divide-y divide-faint">
+        {TOGGLEABLE_TYPES.map((t) => (
+          <li key={t} className="flex items-center justify-between py-2.5">
+            <span className="font-medium text-ink">{eventLabel[t]}</span>
+            <input
+              type="checkbox"
+              aria-label={eventLabel[t]}
+              checked={enabled.includes(t)}
+              onChange={(e) => toggle(t, e.target.checked)}
+              className="h-5 w-5 accent-ring"
+            />
+          </li>
+        ))}
+      </ul>
+    </Card>
+  )
+}
 const field = 'w-full rounded-2xl border border-faint bg-cream p-3 text-ink placeholder:text-inkSoft'
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -244,6 +284,8 @@ export default function SettingsPage() {
           Save baby
         </button>
       </Card>
+
+      <TrackingCard />
 
       <Card title="Medications">
         <ul className="mb-3 divide-y divide-faint">

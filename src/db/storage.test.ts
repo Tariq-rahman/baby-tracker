@@ -13,10 +13,13 @@ import {
   listMedications,
   updateMedication,
   deleteMedication,
+  getEnabledEventTypes,
+  setEnabledEventTypes,
   importAll,
   startSleep,
   stopSleep,
 } from './storage'
+import { DEFAULT_ENABLED_EVENT_TYPES } from './schema'
 import type { SleepEvent } from './schema'
 
 const feed = {
@@ -117,6 +120,38 @@ describe('storage', () => {
     const second = await getBaby()
     expect(second?.name).toBe('Samantha')
     expect(second?.uid).toBe(first?.uid) // identity stable across edits
+  })
+
+  it('returns the default enabled event types when unset', async () => {
+    expect(await getEnabledEventTypes()).toEqual([...DEFAULT_ENABLED_EVENT_TYPES])
+    await saveBaby({ name: 'Sam', dateOfBirth: '2026-05-01' })
+    expect(await getEnabledEventTypes()).toEqual([...DEFAULT_ENABLED_EVENT_TYPES])
+  })
+
+  it('persists a customised enabled set and enqueues the baby for sync', async () => {
+    await saveBaby({ name: 'Sam', dateOfBirth: '2026-05-01' })
+    await db._pending.clear()
+    await setEnabledEventTypes(['feed', 'sleep'])
+
+    expect(await getEnabledEventTypes()).toEqual(['feed', 'sleep'])
+    const pending = await db._pending.toArray()
+    expect(pending).toEqual([expect.objectContaining({ table: 'babies' })])
+  })
+
+  it('preserves the enabled set when the baby name/DOB is edited', async () => {
+    await saveBaby({ name: 'Sam', dateOfBirth: '2026-05-01' })
+    await setEnabledEventTypes(['nappy'])
+    await saveBaby({ name: 'Samantha', dateOfBirth: '2026-05-02' }) // no settings supplied
+
+    const baby = await getBaby()
+    expect(baby?.name).toBe('Samantha')
+    expect(await getEnabledEventTypes()).toEqual(['nappy'])
+  })
+
+  it('does not create a baby just to store settings', async () => {
+    await setEnabledEventTypes(['feed']) // no baby exists yet
+    expect(await getBaby()).toBeUndefined()
+    expect(await getEnabledEventTypes()).toEqual([...DEFAULT_ENABLED_EVENT_TYPES])
   })
 
   it('soft-deletes a medication and hides it from listMedications', async () => {

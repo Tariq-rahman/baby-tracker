@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react'
 import { useEvents, useMedications } from '../hooks/useEvents'
-import { useBaby } from '../hooks/useBaby'
+import { useBaby, useEnabledEventTypes } from '../hooks/useBaby'
 import {
   listEventsForDay,
   getLastEventOfType,
@@ -30,6 +30,7 @@ export default function HomePage() {
   const events = useEvents()
   const medications = useMedications()
   const baby = useBaby()
+  const enabledTypes = useEnabledEventTypes()
   const [adding, setAdding] = useState<LogKind | null>(null)
   const [editing, setEditing] = useState<BabyEvent | null>(null)
   const [toast, setToast] = useState<ToastData | null>(null)
@@ -100,7 +101,7 @@ export default function HomePage() {
           />
         )}
         <Clock events={events} now={now} centerTime={center.time} centerAmpm={center.ampm} />
-        <LogButtons onPick={setAdding} />
+        <LogButtons enabled={enabledTypes} onPick={setAdding} />
 
         <div>
           <div className="flex items-baseline justify-between px-1 pb-2.5">

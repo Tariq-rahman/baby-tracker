@@ -13,6 +13,7 @@
 
 import type {
   Baby,
+  BabySettings,
   Medication,
   MedicationUnit,
   BabyEvent,
@@ -29,6 +30,7 @@ export interface BabyRow {
   household_id: string
   name: string
   date_of_birth: string
+  settings: Partial<BabySettings>
   updated_at: string
   deleted_at: string | null
 }
@@ -75,13 +77,17 @@ export function babyToRow(b: Baby, householdId: string): BabyRow {
     household_id: householdId,
     name: b.name,
     date_of_birth: b.dateOfBirth,
+    settings: b.settings ?? {},
     updated_at: toIso(b.updatedAt as number),
     deleted_at: isoOrNull(b.deletedAt),
   }
 }
 
-/** Server row -> local Baby fields (without the singleton local `id`, which the engine owns). */
+/** Server row -> local Baby fields (without the singleton local `id`, which the engine owns).
+ * `settings` is included only when the row carries a real enabled set, so an
+ * uncustomised household (`{}`) reads back as `settings: undefined` → defaults apply. */
 export function babyFromRow(r: BabyRow): Omit<Baby, 'id'> {
+  const enabled = r.settings?.enabledEventTypes
   return {
     uid: r.id,
     householdId: r.household_id,
@@ -89,6 +95,7 @@ export function babyFromRow(r: BabyRow): Omit<Baby, 'id'> {
     dateOfBirth: r.date_of_birth,
     updatedAt: toMs(r.updated_at),
     deletedAt: msOrNull(r.deleted_at),
+    ...(Array.isArray(enabled) ? { settings: { enabledEventTypes: enabled } } : {}),
   }
 }
 
