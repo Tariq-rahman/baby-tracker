@@ -1,6 +1,6 @@
 # Implementation Plan: Roadmap (H0–H4)
 
-_Status: Phase 0 in progress — Task 0.1 ✅ (merged, PR #12), Task 0.2 ✅ · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
+_Status: Phase 0 ✅ · Phase 1 (H1) ✅ Tasks 1.1–1.6 (PRs #12–#20 merged) — H1 complete · next: pick H2 / DX / opportunistic H1 · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
 
 > **You are a fresh agent.** You have none of the context that produced this plan. Read the "Orientation" section first, in order, before touching code. Every design decision here is already settled and recorded in an ADR — do not relitigate; implement.
 
@@ -90,7 +90,7 @@ _Goal: the frame that lets every later feature slot in without cluttering the de
 
 _Goal: ship breastfeeding (gates audience C), turn History into Trends with the first reflective insights, and land the QoL/beauty items. This phase also starts accumulating the data Phase 2 needs._
 
-### Task 1.1 — Breastfeeding (ADR-0007) — the priority item
+### Task 1.1 — Breastfeeding (ADR-0007) — the priority item ✅ DONE (PR #14, merged)
 
 - `schema.ts`: give `FeedEvent` a `method: 'bottle' | 'breast'`.
   - Bottle: keeps `volumeMl` (required) + optional `content`.
@@ -104,7 +104,7 @@ _Goal: ship breastfeeding (gates audience C), turn History into Trends with the 
 - **Tests:** method round-trips through mapping; legacy feed defaults to bottle; running breast feed persists/syncs; nursing-minutes aggregation; "one running breast feed" enforced.
 - **Done when:** a breastfeeding parent can start/stop/resume a timed feed on the dial and it syncs; a bottle parent sees no change.
 
-### Task 1.2 — Trends view
+### Task 1.2 — Trends view ✅ DONE (PR #15, merged)
 
 - New route/page `TrendsPage` (separate from `HistoryPage`, which stays the raw log). Reuse the existing Recharts setup from the weight chart.
 - A stack of small-multiple cards, **one per Enabled Event Type** (Task 0.1): feeds/day (+ml/day bottle, +minutes/day breast), sleep hours/day, nappies/day (wet vs dirty), doses. Weight's existing chart becomes one card.
@@ -112,13 +112,13 @@ _Goal: ship breastfeeding (gates audience C), turn History into Trends with the 
 - **This is where reflective Insights render** — the insight text sits on the card it describes.
 - **Tests:** per-metric aggregation (table-driven, UTC); window selection; cards respect the enabled set.
 
-### Task 1.3 — First reflective insights
+### Task 1.3 — First reflective insights ✅ DONE (PR #16, + honesty fix PR #17, merged)
 
 - Implement concrete strategies against the Task 0.2 scaffold: volume-vs-baseline (bottle), frequency/nursing-minutes-vs-baseline (breast), and a simple next-feed prediction (confidence-gated).
 - Copy rules (ADR-0005): state the fact + own-baseline; **never** "enough"/"normal"/"ok?"/"should"; optional "worth mentioning to your pediatrician" hand-off only.
 - Render on the matching Trends cards; render the "not enough data yet" state honestly.
 
-### Task 1.4 — Dark mode
+### Task 1.4 — Dark mode ✅ DONE (PR #18, merged; see ADR-0009)
 
 - **Not just aesthetics** — framed as a 3am-feed feature and part of the "beautiful" wedge.
 - **Technical catch:** colours live in **two** places — `tailwind.config.js` static classes (`bg-cream`, `text-ink`, …) AND runtime hex in `src/lib/theme.ts` (`palette`, `eventColor`). Unify via **CSS custom properties**:
@@ -128,12 +128,12 @@ _Goal: ship breastfeeding (gates audience C), turn History into Trends with the 
   - Add a theme context/hook: **default to system preference** (`prefers-color-scheme`) with a **manual override in Settings**. Persist the override in **`localStorage` — device-only, NOT synced** (theme is a per-device preference).
 - **Tests:** toggling sets the class + persists; system default respected when no override. Verify the clock arcs/markers visually in both themes (this needs a browser — see verification).
 
-### Task 1.5 — Settings restructure (light)
+### Task 1.5 — Settings restructure (light) ✅ DONE (PR #19, merged)
 
 - Regroup the current flat card stack into sections so new config has an obvious home: **Baby & Household · Tracking (Enabled Event Types + medications + later schedules) · Notifications (reminders + later insight nudges) · Appearance (theme) · Data (backup/export-import) · Account.**
 - Pure restructure of `SettingsPage.tsx` (extract the existing cards into the sections). Full visual polish deferred to H4 with branding.
 
-### Task 1.6 — Duration-event resume (QoL, ADR context in CONTEXT "Duration Event")
+### Task 1.6 — Duration-event resume (QoL, ADR context in CONTEXT "Duration Event") ✅ DONE (PR #20, merged; see ADR-0010)
 
 - Generalise: a **Duration Event** is Sleep or a breast Feed. Add a storage helper: when starting one, if the most recent ended duration event of that type ended **< ~5 min ago**, **offer-with-undo** to re-open it (set `endedAt` back to `null`) instead of creating a second row.
 - **Offer-with-undo (option B):** auto-reopen but surface a toast "Resumed previous — Undo" (reuse `Toast.tsx`). A genuine double-nap must be recoverable.
