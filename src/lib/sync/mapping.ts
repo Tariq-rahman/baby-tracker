@@ -30,7 +30,7 @@ export interface BabyRow {
   household_id: string
   name: string
   date_of_birth: string
-  settings: Record<string, unknown>
+  settings: Partial<BabySettings>
   updated_at: string
   deleted_at: string | null
 }
@@ -87,7 +87,7 @@ export function babyToRow(b: Baby, householdId: string): BabyRow {
  * `settings` is included only when the row carries a real enabled set, so an
  * uncustomised household (`{}`) reads back as `settings: undefined` → defaults apply. */
 export function babyFromRow(r: BabyRow): Omit<Baby, 'id'> {
-  const enabled = (r.settings as Partial<BabySettings> | undefined)?.enabledEventTypes
+  const enabled = r.settings?.enabledEventTypes
   return {
     uid: r.id,
     householdId: r.household_id,
