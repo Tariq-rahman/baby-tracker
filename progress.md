@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 11:42 · Branch: feat/trends · Task 1.2 built, gate green, not yet committed/PR'd_
+_Updated: 2026-07-05 12:20 · Branch: main @ 4e538fc · Task 1.2 MERGED + visually verified, Task 1.3 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.2 (Trends view) is BUILT on `feat/trends`** — full gate green (build, eslint, 215 tests incl. 13 new). New `/trends` page with per-metric small-multiple cards (feeds, sleep, nappies, doses), a 7d/30d/All window selector, and a dashed baseline reference line per card. Weight became a card that links to the (retained) `/weight` page; the bottom-nav "Weight" tab is now "Trends". Insight strategies + "not enough data" copy are deferred to Task 1.3 (each card has an insight slot; feed card shows factual avg ml/nursing-min as a placeholder). **Next: commit → PR.** Task 1.1's merged `feat/breastfeeding` branch was deleted locally; origin copy still exists (remote delete needs sandbox off).
+**H1 Task 1.2 (Trends view) is DONE and MERGED to `main`** (PR #15, merge `4e538fc`) and visually verified by the user. Working tree clean, on `main`. Full gate was green (build, eslint, 215 tests incl. 13 new). The `/trends` page has per-metric small-multiple cards (feeds, sleep, nappies, doses), a 7d/30d/All window selector, and a dashed baseline reference line per card; Weight is a card linking to the retained `/weight` page; the bottom-nav "Weight" tab is now "Trends". Insight strategies + "not enough data" copy are deferred to Task 1.3 (each card has an `insight` slot; feed card shows factual avg ml/nursing-min as a placeholder). Nothing in flight — next is Task 1.3 on a fresh branch off `main`.
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -20,10 +20,8 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - +13 tests (mapping legacy default, breast round-trips, storage start/stop, nursing aggregation, running/flag detection, feedCount-not-volume). Suite 202, all green.
 
 ## Next
-1. **Commit `feat/trends` + open PR.** Files below. Manual visual check first (behind AuthGate — headless can't drive it): log in, confirm the 4 cards + weight card render, window selector switches 7d/30d/All, baseline dashes show, weight card → `/weight` and its "← Trends" back link work.
-2. **H1 Task 1.3 — First reflective insights** (see plan §"Task 1.3"). Implement concrete strategies against the 0.2 scaffold (`src/lib/insights/`): volume-vs-baseline (bottle), frequency/nursing-min-vs-baseline (breast), confidence-gated next-feed prediction. Render into the **insight slot already on each `TrendCard`** (`insight` prop) + honest "not enough data yet" state. Copy rules ADR-0005 (no "enough"/"normal"/"should").
-3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
-4. **Tidy:** `git push origin --delete feat/breastfeeding` when sandbox is off (local copy already deleted).
+1. **H1 Task 1.3 — First reflective insights** (see plan §"Task 1.3"). Branch off `main` (`feat/insights`). Implement concrete strategies against the 0.2 scaffold (`src/lib/insights/`): volume-vs-baseline (bottle), frequency/nursing-min-vs-baseline (breast), confidence-gated next-feed prediction. Render into the **insight slot already on each `TrendCard`** (`insight` prop) + honest "not enough data yet" state. Copy rules ADR-0005 (no "enough"/"normal"/"should"; optional "worth mentioning to your pediatrician" hand-off only).
+2. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
 - **Task 1.2 nav decision:** replaced the bottom-nav "Weight" tab with "Trends" (chose the recommended option; user was away for the AskUserQuestion). `/weight` route is *kept* (not in the tab bar) — reached by tapping the Trends weight card; WeightPage gained a "← Trends" back link. All weight CRUD stays on `/weight` (didn't cram it into a card).
