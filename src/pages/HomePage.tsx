@@ -107,6 +107,9 @@ export default function HomePage() {
         // exhaustive over BabyEvent — keep a case so it stays type-complete.
         text = 'Growth logged'
         break
+      case 'note':
+        text = 'Note added'
+        break
     }
     flashToast({ type: event.type, text })
   }

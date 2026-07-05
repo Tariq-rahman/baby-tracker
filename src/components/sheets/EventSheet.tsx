@@ -13,9 +13,10 @@ import DoseSheet from './DoseSheet'
 import WeightSheet from './WeightSheet'
 import GrowthSheet from './GrowthSheet'
 import SleepSheet from './SleepSheet'
+import NoteSheet from './NoteSheet'
 
 interface Props {
-  adding: 'bottle' | 'nappy' | 'dose' | 'weight' | 'growth' | 'sleep' | null
+  adding: 'bottle' | 'nappy' | 'dose' | 'weight' | 'growth' | 'sleep' | 'note' | null
   editing: BabyEvent | null
   medications: Medication[]
   /** Most recent feed — used to prefill a new feed sheet. */
@@ -123,6 +124,14 @@ export default function EventSheet({
           <SleepSheet
             initial={editing?.type === 'sleep' ? editing : undefined}
             hasRunning={hasRunningSleep}
+            onSave={handleSave}
+            onDelete={editing ? handleDelete : undefined}
+            onClose={onClose}
+          />
+        )}
+        {kind === 'note' && (
+          <NoteSheet
+            initial={editing?.type === 'note' ? editing : undefined}
             onSave={handleSave}
             onDelete={editing ? handleDelete : undefined}
             onClose={onClose}

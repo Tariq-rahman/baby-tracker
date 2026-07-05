@@ -294,6 +294,19 @@ describe('eventToRow (payload packing)', () => {
       },
       wantPayload: { heightMm: 525, headCircumferenceMm: null },
     },
+    {
+      name: 'note packs its text',
+      event: {
+        type: 'note',
+        uid: 'e10',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        text: 'first smile today',
+      },
+      wantPayload: { text: 'first smile today' },
+    },
   ]
 
   for (const c of cases) {
@@ -424,6 +437,16 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       updatedAt: T,
       deletedAt: null,
       heightMm: 525,
+    },
+    {
+      type: 'note',
+      uid: 'e10',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      text: 'first smile today',
     },
   ]
 

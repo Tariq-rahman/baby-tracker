@@ -1,34 +1,33 @@
-# Progress: Opportunistic H1 event types (Growth / Pumping / Note)
-_Updated: 2026-07-05 18:45 · Branch: main (5ff7319, clean, synced) · paused before starting — decision pending_
+# Progress: Opportunistic H1 event types — Note & Pumping (Growth done)
+_Updated: 2026-07-05 19:20 · Branch: main (b5b758f, clean, synced) · paused after Growth merged_
 
-Shipped: H1 complete (PRs #12–#20), H1 docs → ADRs 0009/0010, and **DX.1 local visual-check loop** (PR #21). See the plans' ✅ markers. Now starting: **opportunistic H1 event types**.
+Shipped: H1 complete (PRs #12–#20), DX.1 (#21), and **Growth** event type (#22). See the plan's ✅ markers. Now on: the last two opportunistic H1 types — **Note** and **Pumping**.
 
 ## Goal
-Add the remaining opportunistic H1 event types behind Enabled Event Types (ADR-0004): **Growth** (height / head circumference), **Pumping**, and a free-text **Note**. Done when each is loggable, appears in History, respects the enabled-types toggle, and has unit tests — surfaced only when its type is enabled.
+Add the two remaining opportunistic H1 event types behind Enabled Event Types (ADR-0004): a free-text **Note** and **Pumping** (volume expressed). Each: loggable, in History, opt-in via the Settings toggle, unit-tested. Part of the opportunistic-H1 slice — see plan §"Opportunistic in H1".
 
 ## Status
-Not started. Clean base on `main`; DX.1 merged, so `npm run shots` is available to visually check each new form + History row. H1's five core types (feed/nappy/weight/dose/sleep) all shipped.
+Growth just merged to `main` (clean). Not started on Note/Pumping. The Weight→Growth pattern is now the proven template for a new per-measurement type; Note/Pumping differ from it (see decisions).
 
 ## Next
-1. **Settle the open question first** (see Blocked) — default-on vs opt-in — because it decides whether `DEFAULT_ENABLED_EVENT_TYPES` changes.
-2. **Scope the event model:** extend `EventType` + the `BabyEvent` discriminated union in [schema.ts](src/db/schema.ts). Growth ≈ a numeric measurement (store metric as integers per CONTEXT), Pumping ≈ volume + optional side/duration, Note ≈ free text. Check whether any needs a Dexie version bump (weight/dose didn't — non-indexed fields don't).
-3. **Wire storage + UI:** `storage.ts` add/list, the log sheet ([EventSheet.tsx](src/components/sheets/EventSheet.tsx)), History rows, Trends if applicable.
-4. **Tests first** for pure logic (any unit conversion / aggregation), then light RTL on the new forms; then `npm run shots` to eyeball light/dark.
+1. **Pick order** — recommend **Note first** (simplest: free text, no units, no chart, no Trends card — just a log sheet + History row). Pumping second.
+2. **Build Note:** `type: 'note'; text: string` on the `BabyEvent` union ([schema.ts](src/db/schema.ts)); no Dexie bump. Wire the six exhaustive `EventType` touchpoints the compiler flags — the build errors are a checklist: `eventColor`/`eventLabel`/`EVENT_VARS` ([theme.ts](src/lib/theme.ts)) + `--note` in [index.css](src/index.css), `EventIcon` ([icons.tsx](src/components/icons.tsx)), `packPayload`+`eventFromRow` ([mapping.ts](src/lib/sync/mapping.ts) + tests), `describeEvent` ([EventList.tsx](src/components/EventList.tsx)), `showToast` ([HomePage.tsx](src/pages/HomePage.tsx:85)). Note likely IS a home quick-log type (unlike Growth) → also `LogButtons.KINDS`, `EventSheet.adding` union, a `NoteSheet`.
+3. **Then Pumping** — see the distinct-from-breast-feed decision below.
+4. Tests first (pure logic), light RTL on the sheet, then `npm run shots`.
 _Later:_ **DX.2** (staging + test account) · **H2** (the smart layer) — see roadmap plan.
 
 ## Context & decisions (this task only)
-- **Pumping vs breast feed:** pumping is a *supply* event (volume expressed), distinct from a breast *feed* (nursing duration, ADR-0007). Keep it its own type — don't conflate.
-- Every new type must read through `storage.ts` (soft-delete `deletedAt == null` filter + sync bookkeeping), never raw Dexie.
-- To visually verify a new type, add sample rows to [fixture.ts](src/dev/fixture.ts) then `npm run shots`.
-
-## Blocked / open questions
-- **Default-on or opt-in?** Are Growth/Pumping/Note in `DEFAULT_ENABLED_EVENT_TYPES` (affects every existing household) or purely opt-in via Settings → Enabled Event Types? Leaning opt-in; needs the user's call before coding. Also: which of the three to build first?
+- **Note is NOT a measurement type** (unlike Growth/Weight): no chart, no Trends card, no units. It's a home quick-log type — mirror the feed/nappy pattern (`LogButtons.KINDS` + `EventSheet.adding` + a sheet + `showToast` case), not the Weight/Growth own-page pattern. Guard hard against scope creep (plan §146: "deliberately minimal timestamped note").
+- **Pumping vs breast feed:** pumping is a *supply* event (volume expressed), distinct from a breast *feed* (nursing duration, ADR-0007). Keep it its own type — don't conflate. Plan calls it "duration + volume"; decide at build time whether duration is worth it or volume-only is enough (lean volume + optional side, keep minimal).
+- **Opt-in mechanics** (proven on Growth #22): leave new types OUT of `DEFAULT_ENABLED_EVENT_TYPES`, ADD them to `TOGGLEABLE_TYPES` in [SettingsPage.tsx](src/pages/SettingsPage.tsx:32). Adding a value to the `EventType` union makes `tsc -b` flag every exhaustive switch/Record that needs a case — use the build as the checklist.
+- Every new type reads through `storage.ts` (`addEvent`/`updateEvent`/`listEvents` — soft-delete filter + sync bookkeeping), never raw Dexie. A plain instant event needs no new storage fn.
+- To eyeball a new type in `npm run shots`: enable it in [fixture.ts](src/dev/fixture.ts) (`settings.enabledEventTypes`) and seed sample rows; add its route to `scripts/shots.mjs` only if it has its own page (Note won't).
 
 ## Key files & links
-- Where new types land: [schema.ts](src/db/schema.ts) (`EventType`, `BabyEvent` union, Dexie version) · [storage.ts](src/db/storage.ts) (add/list) · [EventSheet.tsx](src/components/sheets/EventSheet.tsx) (log forms) · [HistoryPage.tsx](src/pages/HistoryPage.tsx) (rows)
-- _Always:_ [roadmap plan](docs/superpowers/plans/2026-07-03-roadmap-implementation.md) · [DX plan](docs/superpowers/plans/2026-07-05-developer-experience.md) (DX.1 ✅ + harness op-notes) · [CONTEXT.md](CONTEXT.md) · [ADRs](docs/adr/) (0004 enabled-types · 0007 breast-as-method)
+- Model + wiring (same touchpoints Growth used): [schema.ts](src/db/schema.ts) · [mapping.ts](src/lib/sync/mapping.ts) · [theme.ts](src/lib/theme.ts) · [icons.tsx](src/components/icons.tsx) · [EventList.tsx](src/components/EventList.tsx) · [EventSheet.tsx](src/components/sheets/EventSheet.tsx) · [SettingsPage.tsx](src/pages/SettingsPage.tsx) · [fixture.ts](src/dev/fixture.ts)
+- _Always:_ [roadmap plan](docs/superpowers/plans/2026-07-03-roadmap-implementation.md) (§"Opportunistic in H1") · [CONTEXT.md](CONTEXT.md) · [ADRs](docs/adr/) (0004 enabled-types · 0007 breast-as-method)
 
 ## Verify & run
 - Gate (all must pass): **`npm run build`** (= `tsc -b && vite build`) · `npx eslint src/` · `npm test` (sets `TZ=UTC`).
-- Visual check: **`npm run shots`** → PNGs in gitignored `screenshots/`. One-time `npx playwright install chromium`; needs the sandbox disabled (see DX plan op-notes).
-- App: `npm run dev` → open `/index.dev.html` for the seeded, auth-free shell. `git push`/`gh` need the sandbox disabled (env blocks TLS to github.com).
+- Visual check: **`npm run shots`** → PNGs in gitignored `screenshots/`. Needs the sandbox disabled (Chromium Mach-port `Permission denied 1100` under sandbox); one-time `npx playwright install chromium`.
+- App: `npm run dev` → open `/index.dev.html` for the seeded, auth-free shell. `git push`/`gh` also need the sandbox disabled (env blocks TLS to github.com).

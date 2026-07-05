@@ -27,11 +27,11 @@ import type { EventType, MedicationUnit } from '../db/schema'
 
 const UNITS: MedicationUnit[] = ['ml', 'mg', 'IU', 'drops']
 
-// Types a household can switch on/off. The four quick-log types plus Growth, which
-// has its own page (like Weight) but is opt-in per ADR-0004 — off by default, so it
-// needs a toggle to surface. Weight is intentionally absent: it's always tracked
-// from its own page, and setEnabledEventTypes preserves it regardless.
-const TOGGLEABLE_TYPES: EventType[] = ['feed', 'nappy', 'dose', 'sleep', 'growth']
+// Types a household can switch on/off. The four quick-log types plus Growth (its
+// own page, like Weight) and Note (a quick-log type) — both opt-in per ADR-0004,
+// off by default, so they need a toggle to surface. Weight is intentionally absent:
+// it's always tracked from its own page, and setEnabledEventTypes preserves it.
+const TOGGLEABLE_TYPES: EventType[] = ['feed', 'nappy', 'dose', 'sleep', 'growth', 'note']
 
 function TrackingCard() {
   const enabled = useEnabledEventTypes()

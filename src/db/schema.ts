@@ -1,6 +1,6 @@
 import Dexie, { type Table, type Transaction } from 'dexie'
 
-export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep' | 'growth'
+export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep' | 'growth' | 'note'
 export type FeedContent = 'formula' | 'breastmilk'
 export type FeedMethod = 'bottle' | 'breast'
 export type BreastSide = 'left' | 'right' | 'both'
@@ -118,6 +118,16 @@ export interface DoseEvent extends BaseEvent {
   doseAmount: number
 }
 /**
+ * A free-text Note: a deliberately minimal timestamped observation ("first smile",
+ * "seems congested"). No units, no chart, no Trends card — it's a home quick-log
+ * type like feed/nappy, not a per-measurement type like weight/growth. Opt-in per
+ * household (ADR-0004): not in DEFAULT_ENABLED_EVENT_TYPES.
+ */
+export interface NoteEvent extends BaseEvent {
+  type: 'note'
+  text: string
+}
+/**
  * A Sleep spans an interval, unlike every other (instant) event. `occurredAt` is
  * the start; `endedAt` is the end, or `null` while the sleep is still running.
  * A running sleep is a real synced row (not local-only), so both caregivers see
@@ -128,7 +138,14 @@ export interface SleepEvent extends BaseEvent {
   type: 'sleep'
   endedAt: string | null // ISO datetime; null ⇒ in progress
 }
-export type BabyEvent = FeedEvent | NappyEvent | WeightEvent | DoseEvent | SleepEvent | GrowthEvent
+export type BabyEvent =
+  | FeedEvent
+  | NappyEvent
+  | WeightEvent
+  | DoseEvent
+  | SleepEvent
+  | GrowthEvent
+  | NoteEvent
 
 /** Outbox: a record awaiting push. Compound key `[table+uid]` dedupes re-queues. */
 export interface PendingRef {
