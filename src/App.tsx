@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import HistoryPage from './pages/HistoryPage'
 import WeightPage from './pages/WeightPage'
+import TrendsPage from './pages/TrendsPage'
 import SettingsPage from './pages/SettingsPage'
 import AuthGate from './components/AuthGate'
 import { HomeIcon, CalendarIcon, ChartIcon, GearIcon } from './components/icons'
@@ -11,7 +12,7 @@ import { useSync } from './hooks/useSync'
 const navItems = [
   { to: '/', label: 'Home', Icon: HomeIcon },
   { to: '/history', label: 'History', Icon: CalendarIcon },
-  { to: '/weight', label: 'Weight', Icon: ChartIcon },
+  { to: '/trends', label: 'Trends', Icon: ChartIcon },
   { to: '/settings', label: 'Settings', Icon: GearIcon },
 ]
 
@@ -32,6 +33,7 @@ function AuthedApp() {
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route path="/history" element={<HistoryPage />} />
+          <Route path="/trends" element={<TrendsPage />} />
           <Route path="/weight" element={<WeightPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>

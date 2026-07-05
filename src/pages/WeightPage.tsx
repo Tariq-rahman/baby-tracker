@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   LineChart,
   Line,
@@ -14,7 +15,7 @@ import { gramsToKg } from '../lib/units'
 import { eventColor, palette } from '../lib/theme'
 import type { WeightEvent } from '../db/schema'
 import EventSheet from '../components/sheets/EventSheet'
-import { PlusIcon } from '../components/icons'
+import { PlusIcon, ChevronLeft } from '../components/icons'
 
 const col = eventColor.weight
 
@@ -36,6 +37,9 @@ export default function WeightPage() {
 
   return (
     <div className="px-5 pt-3">
+      <Link to="/trends" className="press mb-2 inline-flex items-center gap-1 text-sm font-semibold text-inkSoft">
+        <ChevronLeft size={16} color="#9A8979" /> Trends
+      </Link>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-ink">Weight</h1>
         <button
