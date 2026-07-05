@@ -12,6 +12,9 @@ dist
 dist-ssr
 *.local
 
+# Dev visual-check output (DX.1) — for eyeballing, never committed
+screenshots
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
