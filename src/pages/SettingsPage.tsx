@@ -38,7 +38,7 @@ function TrackingCard() {
     void setEnabledEventTypes(next)
   }
   return (
-    <Card title="Tracking">
+    <Card title="Event types">
       <p className="mb-3 text-sm text-inkSoft">
         Choose what to track. Turning something off hides its log button — your past entries stay.
       </p>
@@ -68,7 +68,7 @@ const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
 function AppearanceCard() {
   const { choice, setTheme } = useTheme()
   return (
-    <Card title="Appearance">
+    <Card>
       <p className="mb-3 text-sm text-inkSoft">
         Dark mode for late-night feeds. System follows your device; a choice here stays on this
         device only.
@@ -100,12 +100,24 @@ function AppearanceCard() {
 
 const field = 'w-full rounded-2xl border border-faint bg-cream p-3 text-ink placeholder:text-inkSoft'
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+// A titled surface. `title` is optional: single-card sections lean on the
+// section header instead of repeating it here.
+function Card({ title, children }: { title?: string; children: React.ReactNode }) {
   return (
     <section className="rounded-3xl bg-surface p-4 shadow-md">
-      <h2 className="mb-3 text-lg font-bold text-ink">{title}</h2>
+      {title && <h2 className="mb-3 text-lg font-bold text-ink">{title}</h2>}
       {children}
     </section>
+  )
+}
+
+// A labelled group of related cards, so new config has an obvious home.
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <div className="space-y-3">
+      <h2 className="px-1 text-xs font-bold uppercase tracking-wide text-inkSoft">{title}</h2>
+      {children}
+    </div>
   )
 }
 
@@ -246,7 +258,7 @@ function RemindersCard() {
   }
 
   return (
-    <Card title="Feed reminders">
+    <Card>
       {!supported ? (
         <p className="text-sm text-inkSoft">
           This device doesn’t support push notifications. Install the app to your home screen and
@@ -297,39 +309,41 @@ export default function SettingsPage() {
   const [medUnit, setMedUnit] = useState<MedicationUnit>('IU')
 
   return (
-    <div className="space-y-5 px-5 pt-3">
+    <div className="space-y-6 px-5 pt-3">
       <h1 className="text-xl font-bold text-ink">Settings</h1>
 
-      <Card title="Baby">
-        <p className="mb-3 text-sm text-inkSoft">
-          Current: {baby ? `${baby.name} (born ${baby.dateOfBirth})` : 'not set'}
-        </p>
-        <input
-          placeholder="Name"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          className={`${field} mb-2`}
-        />
-        <input
-          type="date"
-          value={dob}
-          onChange={(e) => setDob(e.target.value)}
-          className={`${field} mb-3`}
-        />
-        <button
-          onClick={() => name && dob && saveBaby({ name, dateOfBirth: dob })}
-          className="press w-full rounded-2xl py-3 font-bold text-white"
-          style={{ background: palette.ring }}
-        >
-          Save baby
-        </button>
-      </Card>
+      <Section title="Baby & Household">
+        <Card title="Baby">
+          <p className="mb-3 text-sm text-inkSoft">
+            Current: {baby ? `${baby.name} (born ${baby.dateOfBirth})` : 'not set'}
+          </p>
+          <input
+            placeholder="Name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={`${field} mb-2`}
+          />
+          <input
+            type="date"
+            value={dob}
+            onChange={(e) => setDob(e.target.value)}
+            className={`${field} mb-3`}
+          />
+          <button
+            onClick={() => name && dob && saveBaby({ name, dateOfBirth: dob })}
+            className="press w-full rounded-2xl py-3 font-bold text-white"
+            style={{ background: palette.ring }}
+          >
+            Save baby
+          </button>
+        </Card>
+        <SharingCard />
+      </Section>
 
-      <TrackingCard />
+      <Section title="Tracking">
+        <TrackingCard />
 
-      <AppearanceCard />
-
-      <Card title="Medications">
+        <Card title="Medications">
         <ul className="mb-3 divide-y divide-faint">
           {medications.map((m) => (
             <li key={m.id} className="flex items-center justify-between py-2.5">
@@ -380,61 +394,70 @@ export default function SettingsPage() {
         >
           Add medication
         </button>
-      </Card>
+        </Card>
+      </Section>
 
-      <Card title="Backup">
-        <button
-          onClick={async () => {
-            const data = await exportAll()
-            const json = serializeBackup(data)
-            const blob = new Blob([json], { type: 'application/json' })
-            const url = URL.createObjectURL(blob)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
-            a.click()
-            URL.revokeObjectURL(url)
-          }}
-          className="press mb-3 w-full rounded-2xl py-3 font-bold text-white"
-          style={{ background: palette.ink }}
-        >
-          Export JSON
-        </button>
-        <label className="block w-full rounded-2xl border-2 border-dashed border-faint p-3 text-center font-medium text-inkSoft">
-          Import JSON
-          <input
-            type="file"
-            accept="application/json"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
-              if (!file) return
-              try {
-                const text = await file.text()
-                const data = parseBackup(text)
-                if (!confirm('Importing will REPLACE all current data. Continue?')) return
-                await importAll(data)
-                alert('Import complete.')
-              } catch (err) {
-                alert(`Import failed: ${(err as Error).message}`)
-              }
+      <Section title="Notifications">
+        <RemindersCard />
+      </Section>
+
+      <Section title="Appearance">
+        <AppearanceCard />
+      </Section>
+
+      <Section title="Data">
+        <Card>
+          <button
+            onClick={async () => {
+              const data = await exportAll()
+              const json = serializeBackup(data)
+              const blob = new Blob([json], { type: 'application/json' })
+              const url = URL.createObjectURL(blob)
+              const a = document.createElement('a')
+              a.href = url
+              a.download = `baby-tracker-backup-${new Date().toISOString().slice(0, 10)}.json`
+              a.click()
+              URL.revokeObjectURL(url)
             }}
-          />
-        </label>
-      </Card>
+            className="press mb-3 w-full rounded-2xl py-3 font-bold text-white"
+            style={{ background: palette.ink }}
+          >
+            Export JSON
+          </button>
+          <label className="block w-full rounded-2xl border-2 border-dashed border-faint p-3 text-center font-medium text-inkSoft">
+            Import JSON
+            <input
+              type="file"
+              accept="application/json"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0]
+                if (!file) return
+                try {
+                  const text = await file.text()
+                  const data = parseBackup(text)
+                  if (!confirm('Importing will REPLACE all current data. Continue?')) return
+                  await importAll(data)
+                  alert('Import complete.')
+                } catch (err) {
+                  alert(`Import failed: ${(err as Error).message}`)
+                }
+              }}
+            />
+          </label>
+        </Card>
+      </Section>
 
-      <SharingCard />
-
-      <RemindersCard />
-
-      <Card title="Account">
-        <button
-          onClick={() => signOut()}
-          className="press w-full rounded-2xl border border-faint py-3 font-bold text-ink"
-        >
-          Sign out
-        </button>
-      </Card>
+      <Section title="Account">
+        <Card>
+          <button
+            onClick={() => signOut()}
+            className="press w-full rounded-2xl border border-faint py-3 font-bold text-ink"
+          >
+            Sign out
+          </button>
+        </Card>
+      </Section>
     </div>
   )
 }
