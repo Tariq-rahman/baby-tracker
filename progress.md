@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 14:45 · Branch: feat/insights @ 2420bee · Task 1.3 IMPLEMENTED, PR #16 open (awaiting review/merge + visual verify)_
+_Updated: 2026-07-05 15:10 · Branch: main @ 2c2bb86 · Task 1.3 MERGED (PR #16), user deploying to verify live; Task 1.4 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.3 (first reflective insights) is IMPLEMENTED and pushed — PR #16 open, not yet merged.** On branch `feat/insights` (commit `2420bee`). Full gate green: `npm run build`, `eslint`, **236 tests** (+21 new). The Trends **feed** card's `insight` slot now renders real reflective insights (bottle-volume vs baseline, breast-nursing vs baseline, confidence-gated next-feed prediction), replacing the placeholder avg text. **Next: get PR #16 reviewed + merged, then visually verify with real data** (as with Task 1.2). After merge, checkpoint on `main` and move to Task 1.4 (dark mode).
+**H1 Task 1.3 (first reflective insights) is DONE and MERGED to `main`** (PR #16, merge `2c2bb86`). Working tree clean, on `main`. Full gate was green: `npm run build`, `eslint`, **236 tests** (+21 new). The Trends **feed** card's `insight` slot renders real reflective insights (bottle-volume vs baseline, breast-nursing vs baseline, confidence-gated next-feed prediction), replacing the placeholder avg text. User is deploying to Vercel to verify on the live version. Next is Task 1.4 (dark mode) on a fresh branch off `main`.
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -19,14 +19,14 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - UI: `FeedSheet` (bottle/breast toggle) wraps body-only `BottleSheet` + new `BreastSheet` (timer + side chips). `RunningSleepBanner` → generic `RunningBanner`; both sleep and breast-feed banners render. One running breast feed enforced.
   - +13 tests (mapping legacy default, breast round-trips, storage start/stop, nursing aggregation, running/flag detection, feedCount-not-volume). Suite 202, all green.
 - **H1 Task 1.2 — Trends view** — MERGED (PR #15, merge `4e538fc`), visually verified. Per-metric small-multiple cards + 7d/30d/All selector + dashed baseline line; Weight is a card linking to `/weight`; nav "Weight"→"Trends". +13 tests.
-- **H1 Task 1.3 — First reflective insights** — IMPLEMENTED, PR #16 open (`2420bee`), not merged:
+- **H1 Task 1.3 — First reflective insights** — MERGED (PR #16, merge `2c2bb86`; feature `2420bee`):
   - `src/lib/insights/strategies.ts`: `bottleVolumeStrategy` (today ml vs own N-day daily avg), `breastNursingStrategy` (today nursing-min vs baseline; running/flagged = 0), `nextFeedStrategy` (confidence-gated prediction, either method). `listFeedStrategies()` builds all three w/ `DEFAULT_FEED_CONFIG`.
   - Each self-gates: **silent** if method unused, **"keep logging"** (insufficient-data) if used-but-sparse, **comparative fact** once gate (3d + 5 events / 7d window) met.
   - New baseline helpers: `localDay`, `todaySum`, `compareDirection` (±tol band → only `below`/`above`/`about the same as`).
   - `InsightList.tsx` renders facts into the feed `TrendCard` slot (muted for insufficient-data, 🕐 for prediction). +21 tests, suite 236.
 
 ## Next
-1. **Get PR #16 merged** (review, then merge to `main`). After merge: checkpoint `progress.md` on `main`, then **visually verify** the feed card insights render sensibly against real data.
+1. **User is verifying Task 1.3 on the live Vercel deploy.** If insights look off against real data, fix on a new branch. Otherwise proceed.
 2. **H1 Task 1.4 — Dark mode** (see plan §"Task 1.4"). Fresh branch off `main`.
 3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
