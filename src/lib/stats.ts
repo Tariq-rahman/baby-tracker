@@ -70,6 +70,36 @@ export function isFlaggedBreastFeed(feed: BreastFeedEvent, now: Date): boolean {
   return feed.endedAt == null && now.getTime() - Date.parse(feed.occurredAt) > BREAST_FLAG_MS
 }
 
+/** A Duration Event is a sleep or a breast feed — one that starts, then ends later. */
+export type DurationKind = 'sleep' | 'breast'
+
+/** Stop-then-restart within this window is treated as one interrupted session, not two. */
+export const RESUME_WINDOW_MS = 5 * 60 * 1000
+
+/**
+ * The most-recently-ended duration event of `kind` that finished within
+ * `windowMs` before `now` — a candidate to *resume* (reopen) rather than start
+ * anew, so an accidental stop-then-restart doesn't split one session into two.
+ * Returns undefined if the latest ended session of that kind is older than the
+ * window (or none exists). Ignores running sessions (that's `getRunning*`'s job).
+ */
+export function getResumableDurationEvent(
+  events: BabyEvent[],
+  kind: DurationKind,
+  now: Date,
+  windowMs: number = RESUME_WINDOW_MS,
+): SleepEvent | BreastFeedEvent | undefined {
+  const isKind = (e: BabyEvent): e is SleepEvent | BreastFeedEvent =>
+    kind === 'sleep' ? e.type === 'sleep' : isBreastFeed(e)
+  const latest = events
+    .filter(isKind)
+    .filter((e) => e.endedAt != null)
+    .sort((a, b) => (b.endedAt as string).localeCompare(a.endedAt as string))[0]
+  if (!latest?.endedAt) return undefined
+  const sinceEnd = now.getTime() - Date.parse(latest.endedAt)
+  return sinceEnd >= 0 && sinceEnd <= windowMs ? latest : undefined
+}
+
 /**
  * Total nursing minutes attributable to a day, clipping each breast feed's interval
  * to [dayStart, dayEnd) (mirrors sleepMinutesForDay). A running feed counts up to

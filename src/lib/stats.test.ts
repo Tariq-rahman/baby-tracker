@@ -11,6 +11,7 @@ import {
   getRunningBreastFeed,
   isFlaggedBreastFeed,
   nursingMinutesForDay,
+  getResumableDurationEvent,
 } from './stats'
 import type { BabyEvent, BreastFeedEvent, SleepEvent } from '../db/schema'
 
@@ -167,6 +168,52 @@ describe('getRunningSleep', () => {
   })
   it('returns undefined when nothing is open', () => {
     expect(getRunningSleep(events)).toBeUndefined()
+  })
+})
+
+describe('getResumableDurationEvent', () => {
+  const now = new Date('2026-06-09T12:00:00.000Z')
+
+  it('returns a sleep that ended within the window', () => {
+    const list = [sleep({ id: 7, occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T11:58:00.000Z' })]
+    expect(getResumableDurationEvent(list, 'sleep', now)?.id).toBe(7)
+  })
+
+  it('returns undefined when the latest ended sleep is older than the window', () => {
+    const list = [sleep({ id: 7, occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T11:50:00.000Z' })]
+    expect(getResumableDurationEvent(list, 'sleep', now)).toBeUndefined()
+  })
+
+  it('picks the most-recently-ended session, not the earliest', () => {
+    const list = [
+      sleep({ id: 1, occurredAt: '2026-06-09T09:00:00.000Z', endedAt: '2026-06-09T09:30:00.000Z' }),
+      sleep({ id: 2, occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T11:59:00.000Z' }),
+    ]
+    expect(getResumableDurationEvent(list, 'sleep', now)?.id).toBe(2)
+  })
+
+  it('ignores running sessions (endedAt null)', () => {
+    const list = [sleep({ id: 8, occurredAt: '2026-06-09T11:55:00.000Z', endedAt: null })]
+    expect(getResumableDurationEvent(list, 'sleep', now)).toBeUndefined()
+  })
+
+  it('resumes breast feeds by kind, ignoring a recently-ended sleep', () => {
+    const list: BabyEvent[] = [
+      sleep({ id: 1, occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T11:58:00.000Z' }),
+      breastFeed({ id: 2, occurredAt: '2026-06-09T11:30:00.000Z', endedAt: '2026-06-09T11:57:00.000Z' }),
+    ]
+    expect(getResumableDurationEvent(list, 'breast', now)?.id).toBe(2)
+    expect(getResumableDurationEvent(list, 'breast', now)?.type).toBe('feed')
+  })
+
+  it('ignores a bottle feed (not a duration event) when resuming a breast feed', () => {
+    const list: BabyEvent[] = [...events] // bottle feeds only
+    expect(getResumableDurationEvent(list, 'breast', now)).toBeUndefined()
+  })
+
+  it('ignores an end timestamp in the future (clock skew)', () => {
+    const list = [sleep({ id: 7, occurredAt: '2026-06-09T11:00:00.000Z', endedAt: '2026-06-09T12:05:00.000Z' })]
+    expect(getResumableDurationEvent(list, 'sleep', now)).toBeUndefined()
   })
 })
 

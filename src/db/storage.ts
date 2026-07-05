@@ -1,5 +1,6 @@
 import { db, DEFAULT_ENABLED_EVENT_TYPES } from './schema'
 import type { Baby, Medication, BabyEvent, BreastSide, EventType, SyncTable, SyncFields } from './schema'
+import { getResumableDurationEvent, type DurationKind } from '../lib/stats'
 
 const BABY_ID = 1
 
@@ -133,10 +134,42 @@ export async function deleteEvent(id: number): Promise<void> {
   })
 }
 
-// --- Sleep (a duration event: start now, stop later) ---
-/** Begin a running sleep — a synced row with `endedAt: null` (visible to all caregivers). */
-export async function startSleep(occurredAt: string): Promise<number> {
-  return addEvent({
+// --- Duration events (Sleep + breast Feed): start now, stop later, resume if just stopped ---
+
+/**
+ * Outcome of starting a duration event. `resumed` is true when we reopened a
+ * just-ended session instead of creating a new row; `previousEndedAt` is the end
+ * we cleared, so `undoResume` can put it back if the resume was wrong.
+ */
+export interface StartDurationResult {
+  id: number
+  resumed: boolean
+  previousEndedAt?: string
+}
+
+/**
+ * Start a duration event, but if the most recent session of that kind ended
+ * within `RESUME_WINDOW_MS`, reopen it instead (an accidental stop-then-restart
+ * is one interrupted session, not two). Reopening keeps the original start.
+ */
+async function startDurationEvent(
+  kind: DurationKind,
+  newEvent: BabyEvent,
+): Promise<StartDurationResult> {
+  const events = await listEvents()
+  const resumable = getResumableDurationEvent(events, kind, new Date())
+  if (resumable?.id != null && resumable.endedAt != null) {
+    const previousEndedAt = resumable.endedAt
+    await updateEvent(resumable.id, { endedAt: null })
+    return { id: resumable.id, resumed: true, previousEndedAt }
+  }
+  const id = await addEvent(newEvent)
+  return { id, resumed: false }
+}
+
+/** Begin a running sleep, resuming a just-ended one if within the window. */
+export async function startSleep(occurredAt: string): Promise<StartDurationResult> {
+  return startDurationEvent('sleep', {
     type: 'sleep',
     occurredAt,
     endedAt: null,
@@ -148,10 +181,12 @@ export async function stopSleep(id: number, endedAt: string): Promise<void> {
   await updateEvent(id, { endedAt })
 }
 
-// --- Breastfeeding (a Feed that is a duration event; mirrors Sleep — ADR-0007) ---
-/** Begin a running breast feed — a synced Feed row with `endedAt: null` (visible to all caregivers). */
-export async function startBreastFeed(occurredAt: string, side: BreastSide): Promise<number> {
-  return addEvent({
+/** Begin a running breast feed, resuming a just-ended one if within the window (ADR-0007). */
+export async function startBreastFeed(
+  occurredAt: string,
+  side: BreastSide,
+): Promise<StartDurationResult> {
+  return startDurationEvent('breast', {
     type: 'feed',
     method: 'breast',
     side,
@@ -163,6 +198,21 @@ export async function startBreastFeed(occurredAt: string, side: BreastSide): Pro
 /** Stop a running breast feed by setting its end. Editing a running feed's end IS the stop. */
 export async function stopBreastFeed(id: number, endedAt: string): Promise<void> {
   await updateEvent(id, { endedAt })
+}
+
+/**
+ * Undo an auto-resume: re-close the reopened row at its previous end and create
+ * the genuinely-new session the caregiver intended. One tap turns a wrongly
+ * merged session back into two separate ones (a real double-nap). Returns the
+ * new session's id.
+ */
+export async function undoResume(
+  resumedId: number,
+  previousEndedAt: string,
+  newEvent: BabyEvent,
+): Promise<number> {
+  await updateEvent(resumedId, { endedAt: previousEndedAt })
+  return addEvent(newEvent)
 }
 
 // --- Backup ---

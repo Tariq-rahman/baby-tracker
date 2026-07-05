@@ -5,6 +5,8 @@ import { EventIcon } from './icons'
 export interface ToastData {
   type: EventType
   text: string
+  /** Optional inline action (e.g. "Undo" after an auto-resume). */
+  action?: { label: string; onAction: () => void }
 }
 
 /** Brief confirmation that drops in after logging an event. */
@@ -22,6 +24,15 @@ export default function Toast({ data }: { data: ToastData | null }) {
         <EventIcon type={data.type} size={15} color="#fff" sw={2.1} />
       </span>
       <span className="text-sm font-semibold">{data.text}</span>
+      {data.action && (
+        <button
+          type="button"
+          className="press -my-1 ml-1 rounded-lg px-2.5 py-1 text-sm font-bold text-white/95 underline underline-offset-2"
+          onClick={data.action.onAction}
+        >
+          {data.action.label}
+        </button>
+      )}
     </div>
   )
 }
