@@ -11,7 +11,7 @@ import { getLastEventOfType } from '../lib/stats'
 import { listDailyTrend, listWindowDays, seriesMean, TREND_WINDOWS } from '../lib/trends'
 import { listFeedStrategies, runStrategies } from '../lib/insights'
 import { gramsToKg } from '../lib/units'
-import { eventColor } from '../lib/theme'
+import { eventColor, palette } from '../lib/theme'
 import type { EventType, WeightEvent } from '../db/schema'
 import TrendCard, { type TrendSeries } from '../components/TrendCard'
 import InsightList from '../components/InsightList'
@@ -144,7 +144,7 @@ function WeightCard() {
         </h2>
         <span className="flex items-center gap-0.5 text-xs font-semibold text-inkSoft">
           {latest ? `${gramsToKg(latest.grams).toFixed(3)} kg` : 'No data'}
-          <ChevronRight size={14} color="#9A8979" />
+          <ChevronRight size={14} color={palette.inkSoft} />
         </span>
       </div>
       {data.length >= 2 ? (

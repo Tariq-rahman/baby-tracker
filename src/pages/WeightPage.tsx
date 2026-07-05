@@ -38,7 +38,7 @@ export default function WeightPage() {
   return (
     <div className="px-5 pt-3">
       <Link to="/trends" className="press mb-2 inline-flex items-center gap-1 text-sm font-semibold text-inkSoft">
-        <ChevronLeft size={16} color="#9A8979" /> Trends
+        <ChevronLeft size={16} color={palette.inkSoft} /> Trends
       </Link>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-xl font-bold text-ink">Weight</h1>
@@ -90,7 +90,7 @@ export default function WeightPage() {
             key={w.id}
             onClick={() => setEditing(w)}
             className="press flex w-full items-center justify-between px-4 py-3 text-left"
-            style={{ borderTop: i === 0 ? 'none' : '1px solid #FBF3EA' }}
+            style={{ borderTop: i === 0 ? 'none' : `1px solid ${palette.cream}` }}
           >
             <span className="text-sm font-medium text-inkSoft">
               {new Date(w.occurredAt).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}

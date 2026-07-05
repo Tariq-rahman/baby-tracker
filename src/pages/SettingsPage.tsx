@@ -22,6 +22,7 @@ import {
   DEFAULT_INTERVAL_MINUTES,
 } from '../lib/push'
 import { eventColor, eventLabel, palette } from '../lib/theme'
+import { useTheme, type ThemeChoice } from '../lib/theme-context'
 import type { EventType, MedicationUnit } from '../db/schema'
 
 const UNITS: MedicationUnit[] = ['ml', 'mg', 'IU', 'drops']
@@ -58,6 +59,45 @@ function TrackingCard() {
     </Card>
   )
 }
+const THEME_OPTIONS: { value: ThemeChoice; label: string }[] = [
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+  { value: 'system', label: 'System' },
+]
+
+function AppearanceCard() {
+  const { choice, setTheme } = useTheme()
+  return (
+    <Card title="Appearance">
+      <p className="mb-3 text-sm text-inkSoft">
+        Dark mode for late-night feeds. System follows your device; a choice here stays on this
+        device only.
+      </p>
+      <div className="flex gap-2">
+        {THEME_OPTIONS.map((opt) => {
+          const active = choice === opt.value
+          return (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setTheme(opt.value)}
+              aria-pressed={active}
+              className="press flex-1 rounded-2xl px-2 py-3 text-[15px] font-bold"
+              style={
+                active
+                  ? { border: `1.8px solid ${palette.ring}`, background: `${palette.ring}1f`, color: palette.ring }
+                  : { border: `1.6px solid ${palette.faint}`, background: palette.surface, color: palette.inkSoft }
+              }
+            >
+              {opt.label}
+            </button>
+          )
+        })}
+      </div>
+    </Card>
+  )
+}
+
 const field = 'w-full rounded-2xl border border-faint bg-cream p-3 text-ink placeholder:text-inkSoft'
 
 function Card({ title, children }: { title: string; children: React.ReactNode }) {
@@ -286,6 +326,8 @@ export default function SettingsPage() {
       </Card>
 
       <TrackingCard />
+
+      <AppearanceCard />
 
       <Card title="Medications">
         <ul className="mb-3 divide-y divide-faint">
