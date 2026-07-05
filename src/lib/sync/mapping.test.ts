@@ -32,10 +32,12 @@ describe('babyToRow / babyFromRow', () => {
       household_id: HH,
       name: 'Ada',
       date_of_birth: '2026-01-01',
+      settings: {},
       updated_at: T_ISO,
       deleted_at: null,
     })
     const back = babyFromRow(row)
+    // No settings on the row ⇒ omitted locally, so defaults apply.
     expect(back).toEqual({
       uid: 'baby-uid',
       householdId: HH,
@@ -44,6 +46,30 @@ describe('babyToRow / babyFromRow', () => {
       updatedAt: T,
       deletedAt: null,
     })
+  })
+
+  it('round-trips enabled event types through settings', () => {
+    const baby: Baby = {
+      id: 1,
+      uid: 'baby-uid',
+      householdId: HH,
+      name: 'Ada',
+      dateOfBirth: '2026-01-01',
+      settings: { enabledEventTypes: ['feed', 'sleep'] },
+      updatedAt: T,
+      deletedAt: null,
+    }
+    const row = babyToRow(baby, HH)
+    expect(row.settings).toEqual({ enabledEventTypes: ['feed', 'sleep'] })
+    expect(babyFromRow(row).settings).toEqual({ enabledEventTypes: ['feed', 'sleep'] })
+  })
+
+  it('treats an empty settings object as no settings (defaults apply)', () => {
+    const row = babyToRow(
+      { id: 1, uid: 'u', householdId: HH, name: 'Ada', dateOfBirth: '2026-01-01', updatedAt: T, deletedAt: null },
+      HH,
+    )
+    expect(babyFromRow(row).settings).toBeUndefined()
   })
 
   it('maps a tombstone deletedAt to/from ISO', () => {

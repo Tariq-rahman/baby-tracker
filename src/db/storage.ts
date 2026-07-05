@@ -1,5 +1,5 @@
-import { db } from './schema'
-import type { Baby, Medication, BabyEvent, SyncTable, SyncFields } from './schema'
+import { db, DEFAULT_ENABLED_EVENT_TYPES } from './schema'
+import type { Baby, Medication, BabyEvent, EventType, SyncTable, SyncFields } from './schema'
 
 const BABY_ID = 1
 
@@ -26,8 +26,30 @@ export async function saveBaby(input: BabyInput): Promise<void> {
       id: BABY_ID,
       uid,
       householdId: existing?.householdId ?? null,
+      // `put` replaces the whole row, so carry settings forward unless the caller
+      // supplied them — otherwise editing name/DOB would wipe Enabled Event Types.
+      settings: input.settings ?? existing?.settings,
       updatedAt: Date.now(),
       deletedAt: null,
+    })
+    await enqueue('babies', uid)
+  })
+}
+
+// --- Enabled Event Types (per-household config on the baby row; ADR-0004) ---
+export async function getEnabledEventTypes(): Promise<EventType[]> {
+  const baby = await db.babies.get(BABY_ID)
+  return baby?.settings?.enabledEventTypes ?? [...DEFAULT_ENABLED_EVENT_TYPES]
+}
+export async function setEnabledEventTypes(enabled: EventType[]): Promise<void> {
+  await db.transaction('rw', db.babies, db._pending, async () => {
+    const existing = await db.babies.get(BABY_ID)
+    if (!existing) return // no baby yet; the default set applies until one exists
+    const uid = existing.uid ?? crypto.randomUUID()
+    await db.babies.update(BABY_ID, {
+      uid,
+      settings: { ...existing.settings, enabledEventTypes: enabled },
+      updatedAt: Date.now(),
     })
     await enqueue('babies', uid)
   })

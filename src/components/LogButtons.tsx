@@ -1,3 +1,4 @@
+import type { EventType } from '../db/schema'
 import { eventColor, eventLabel } from '../lib/theme'
 import { EventIcon } from './icons'
 
@@ -11,11 +12,18 @@ const KINDS: { kind: LogKind; type: 'feed' | 'nappy' | 'dose' | 'sleep' }[] = [
   { kind: 'sleep', type: 'sleep' },
 ]
 
-/** Solid, circular ("radial") log buttons, one per core event type. */
-export default function LogButtons({ onPick }: { onPick: (kind: LogKind) => void }) {
+/** Solid, circular ("radial") log buttons — only for the household's Enabled Event Types. */
+export default function LogButtons({
+  enabled,
+  onPick,
+}: {
+  enabled: EventType[]
+  onPick: (kind: LogKind) => void
+}) {
+  const kinds = KINDS.filter(({ type }) => enabled.includes(type))
   return (
     <div className="flex flex-wrap justify-center gap-6">
-      {KINDS.map(({ kind, type }) => {
+      {kinds.map(({ kind, type }) => {
         const col = eventColor[type]
         return (
           <div key={kind} className="flex flex-col items-center gap-2">

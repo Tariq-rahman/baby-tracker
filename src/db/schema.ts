@@ -28,10 +28,29 @@ export interface SyncFields {
   deletedAt?: number | null
 }
 
+/**
+ * Which event types this household logs — drives the log buttons (ADR-0004).
+ * Absent on a row ⇒ the household hasn't customised it ⇒ DEFAULT_ENABLED_EVENT_TYPES.
+ */
+export interface BabySettings {
+  enabledEventTypes: EventType[]
+}
+
+/** The original five — the enabled set for any household that hasn't customised it. */
+export const DEFAULT_ENABLED_EVENT_TYPES: readonly EventType[] = [
+  'feed',
+  'nappy',
+  'weight',
+  'dose',
+  'sleep',
+]
+
 export interface Baby extends SyncFields {
   id: number // always 1 (singleton)
   name: string
   dateOfBirth: string // ISO date 'YYYY-MM-DD'
+  /** Per-household config. Non-indexed, so no Dexie version bump. See ADR-0004. */
+  settings?: BabySettings
 }
 
 export interface Medication extends SyncFields {
