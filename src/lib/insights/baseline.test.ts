@@ -10,6 +10,9 @@ import {
   intervalStats,
   confidenceFromCv,
   predictNext,
+  todaySum,
+  compareDirection,
+  localDay,
   type WindowConfig,
 } from './baseline'
 
@@ -137,6 +140,40 @@ describe('confidenceFromCv', () => {
   for (const c of cases) {
     it(`cv ${c.cv} with maxCv ${c.maxCv} → ${c.want}`, () => {
       expect(confidenceFromCv(c.cv, c.maxCv)).toBeCloseTo(c.want)
+    })
+  }
+})
+
+describe('localDay & todaySum', () => {
+  it('formats a Date as local YYYY-MM-DD', () => {
+    expect(localDay(NOW)).toBe('2026-07-08')
+  })
+
+  it('sums a metric only over events on now\'s local day', () => {
+    const events: BabyEvent[] = [
+      feed(ago(1), 100), // today
+      feed(ago(2), 120), // today
+      feed(ago(25), 80), // yesterday — excluded
+    ]
+    expect(todaySum(events, 'feed', NOW, (e) => (e.method === 'breast' ? 0 : e.volumeMl))).toBe(220)
+  })
+
+  it('is zero when nothing happened today', () => {
+    expect(todaySum([feed(ago(25), 80)], 'feed', NOW, countMetric)).toBe(0)
+  })
+})
+
+describe('compareDirection', () => {
+  const cases: { name: string; today: number; baseline: number; want: string }[] = [
+    { name: 'clearly above the band', today: 130, baseline: 100, want: 'above' },
+    { name: 'clearly below the band', today: 70, baseline: 100, want: 'below' },
+    { name: 'inside the ±10% band', today: 105, baseline: 100, want: 'about the same as' },
+    { name: 'exactly on the band edge counts as same', today: 110, baseline: 100, want: 'about the same as' },
+    { name: 'zero baseline collapses to same', today: 50, baseline: 0, want: 'about the same as' },
+  ]
+  for (const c of cases) {
+    it(c.name, () => {
+      expect(compareDirection(c.today, c.baseline, 0.1)).toBe(c.want)
     })
   }
 })
