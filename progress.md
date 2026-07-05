@@ -1,6 +1,6 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 18:45 · Branch: feat/duration-event-resume (off main da17bd2), commit 46cbeea · Task 1.6 CODE DONE, gate green, no PR yet_
+_Updated: 2026-07-05 18:55 · Branch: feat/duration-event-resume (off main da17bd2) · Task 1.6 [PR #20](https://github.com/Tariq-rahman/baby-tracker/pull/20) OPEN, gate green_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). The **DX phase** (visual-check loop) was planned but **deprioritised** this session in favour of shipping **H1 Task 1.6 — Duration-event resume**.
@@ -53,7 +53,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
 - **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
 
 ## Next
-1. **Open a PR for Task 1.6** (`feat/duration-event-resume` → `main`). `gh`/`git push` need the sandbox disabled (env blocks TLS to github.com).
+1. **Review/merge [PR #20](https://github.com/Tariq-rahman/baby-tracker/pull/20)** (Task 1.6, `feat/duration-event-resume` → `main`). `gh`/`git push` need the sandbox disabled (env blocks TLS to github.com).
 2. **Visually verify** the resume + undo flow in a browser (`npm run dev`): stop a sleep, immediately start again → banner shows the same running session + "Resumed previous — Undo" toast; tap Undo → two separate sessions (old re-closed, new running). Repeat for breast feed. This is the manual check the deferred DX.1 loop would have automated.
 3. Then pick the next roadmap item (below).
 
