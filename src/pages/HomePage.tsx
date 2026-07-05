@@ -102,6 +102,11 @@ export default function HomePage() {
       case 'dose':
         text = 'Meds logged'
         break
+      case 'growth':
+        // Growth is logged from its own page, not the home grid, but the switch is
+        // exhaustive over BabyEvent — keep a case so it stays type-complete.
+        text = 'Growth logged'
+        break
     }
     flashToast({ type: event.type, text })
   }

@@ -27,9 +27,11 @@ import type { EventType, MedicationUnit } from '../db/schema'
 
 const UNITS: MedicationUnit[] = ['ml', 'mg', 'IU', 'drops']
 
-// Types with a quick-log button on the home screen. Weight is tracked from its own
-// page, so it isn't toggled here; setEnabledEventTypes preserves it regardless.
-const TOGGLEABLE_TYPES: EventType[] = ['feed', 'nappy', 'dose', 'sleep']
+// Types a household can switch on/off. The four quick-log types plus Growth, which
+// has its own page (like Weight) but is opt-in per ADR-0004 — off by default, so it
+// needs a toggle to surface. Weight is intentionally absent: it's always tracked
+// from its own page, and setEnabledEventTypes preserves it regardless.
+const TOGGLEABLE_TYPES: EventType[] = ['feed', 'nappy', 'dose', 'sleep', 'growth']
 
 function TrackingCard() {
   const enabled = useEnabledEventTypes()

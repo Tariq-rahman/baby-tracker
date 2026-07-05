@@ -1,5 +1,14 @@
 import { describe, it, expect } from 'vitest'
-import { kgToGrams, gramsToKg, lbOzToGrams, gramsToLbOz } from './units'
+import {
+  kgToGrams,
+  gramsToKg,
+  lbOzToGrams,
+  gramsToLbOz,
+  cmToMm,
+  mmToCm,
+  inchesToMm,
+  mmToInches,
+} from './units'
 
 describe('kgToGrams', () => {
   it.each([
@@ -34,5 +43,39 @@ describe('gramsToLbOz', () => {
   })
   it('carries 16 oz into a pound', () => {
     expect(gramsToLbOz(453)).toEqual({ lb: 1, oz: 0 })
+  })
+})
+
+describe('cmToMm', () => {
+  it.each([
+    [52.5, 525],
+    [38, 380],
+    [0, 0],
+    [50.34, 503], // rounds to nearest mm
+  ])('converts %s cm to %s mm', (cm, mm) => {
+    expect(cmToMm(cm)).toBe(mm)
+  })
+})
+
+describe('mmToCm', () => {
+  it('converts mm to cm as a number', () => {
+    expect(mmToCm(525)).toBeCloseTo(52.5, 5)
+  })
+})
+
+describe('inchesToMm', () => {
+  it.each([
+    [20, 508], // 20in = 508mm exactly
+    [0, 0],
+    [15, 381], // 381.0 -> 381
+    [14.96, 380], // 379.98 -> 380 (rounds to nearest mm)
+  ])('converts %s in to %s mm', (inches, mm) => {
+    expect(inchesToMm(inches)).toBe(mm)
+  })
+})
+
+describe('mmToInches', () => {
+  it('converts mm to inches as a number', () => {
+    expect(mmToInches(508)).toBeCloseTo(20, 5)
   })
 })

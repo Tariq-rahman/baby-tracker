@@ -2,7 +2,7 @@ import type { BabyEvent, Medication } from '../db/schema'
 import { eventColor, eventLabel, palette } from '../lib/theme'
 import { fmtClock, relativeTime } from '../lib/format'
 import { formatSleepDuration } from '../lib/stats'
-import { gramsToKg } from '../lib/units'
+import { gramsToKg, mmToCm } from '../lib/units'
 import { EventIcon } from './icons'
 
 interface Props {
@@ -26,6 +26,12 @@ function describeEvent(e: BabyEvent, medications: Medication[] = []): string {
       return `${e.nappyType} nappy${e.size ? ` · ${e.size}` : ''}`
     case 'weight':
       return `${gramsToKg(e.grams).toFixed(3)} kg`
+    case 'growth': {
+      const parts: string[] = []
+      if (e.heightMm != null) parts.push(`${mmToCm(e.heightMm).toFixed(1)} cm`)
+      if (e.headCircumferenceMm != null) parts.push(`head ${mmToCm(e.headCircumferenceMm).toFixed(1)} cm`)
+      return parts.join(' · ')
+    }
     case 'dose': {
       const med = medications.find((m) => m.id === e.medicationId)
       return med ? `${med.name} · ${e.doseAmount} ${med.unit}` : `Dose · ${e.doseAmount}`

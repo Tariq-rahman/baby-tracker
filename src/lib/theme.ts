@@ -31,6 +31,7 @@ export const eventColor: Record<EventType, string> = {
   dose: '#C25A40',
   weight: '#7C9885',
   sleep: '#8C7BA0', // mauve — calm, night-ish; matches the AM band wash
+  growth: '#6C8EA3', // dusty blue — a measurement hue, distinct from weight's sage
 }
 
 /** Short human label per event type. */
@@ -40,6 +41,7 @@ export const eventLabel: Record<EventType, string> = {
   dose: 'Meds',
   weight: 'Weight',
   sleep: 'Sleep',
+  growth: 'Growth',
 }
 
 /** CSS custom property backing each palette key. */
@@ -61,6 +63,7 @@ const EVENT_VARS: Record<EventType, string> = {
   dose: '--meds',
   weight: '--weight',
   sleep: '--sleep',
+  growth: '--growth',
 }
 
 /**

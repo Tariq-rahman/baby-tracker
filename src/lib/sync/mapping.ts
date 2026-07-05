@@ -156,6 +156,8 @@ function packPayload(e: BabyEvent, ctx: EventToRowCtx): Record<string, unknown> 
       return { nappyType: e.nappyType, size: e.size ?? null }
     case 'weight':
       return { grams: e.grams }
+    case 'growth':
+      return { heightMm: e.heightMm ?? null, headCircumferenceMm: e.headCircumferenceMm ?? null }
     case 'dose':
       return {
         medicationUid: ctx.medUidByLocalId.get(e.medicationId) ?? null,
@@ -225,6 +227,13 @@ export function eventFromRow(r: EventRow, ctx: EventFromRowCtx): WithoutId<BabyE
       }
     case 'weight':
       return { ...base, type: 'weight', grams: Number(p.grams) }
+    case 'growth':
+      return {
+        ...base,
+        type: 'growth',
+        ...(p.heightMm != null ? { heightMm: Number(p.heightMm) } : {}),
+        ...(p.headCircumferenceMm != null ? { headCircumferenceMm: Number(p.headCircumferenceMm) } : {}),
+      }
     case 'dose':
       return {
         ...base,

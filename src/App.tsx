@@ -2,6 +2,7 @@ import { NavLink, Route, Routes } from 'react-router-dom'
 import HomePage from './pages/HomePage'
 import HistoryPage from './pages/HistoryPage'
 import WeightPage from './pages/WeightPage'
+import GrowthPage from './pages/GrowthPage'
 import TrendsPage from './pages/TrendsPage'
 import SettingsPage from './pages/SettingsPage'
 import AuthGate from './components/AuthGate'
@@ -40,6 +41,7 @@ export function AppShell() {
           <Route path="/history" element={<HistoryPage />} />
           <Route path="/trends" element={<TrendsPage />} />
           <Route path="/weight" element={<WeightPage />} />
+          <Route path="/growth" element={<GrowthPage />} />
           <Route path="/settings" element={<SettingsPage />} />
         </Routes>
 
