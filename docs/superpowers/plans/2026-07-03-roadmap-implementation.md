@@ -1,6 +1,6 @@
 # Implementation Plan: Roadmap (H0–H4)
 
-_Status: not started · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
+_Status: Phase 0 in progress — Task 0.1 ✅ (merged, PR #12), Task 0.2 ✅ · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
 
 > **You are a fresh agent.** You have none of the context that produced this plan. Read the "Orientation" section first, in order, before touching code. Every design decision here is already settled and recorded in an ADR — do not relitigate; implement.
 
@@ -53,7 +53,7 @@ This is the payoff of ADR-0003: adding to events is nearly free. Prefer riding t
 - **Soft delete only:** set `deletedAt`; every read filters `deletedAt == null` (do it in `storage.ts`).
 - **Tests:** all new pure logic gets Vitest tests (prefer table-driven); critical forms get RTL tests. Run via `npm test` (it sets `TZ=UTC` — required; do not use bare `npx vitest`).
 - **Docs are committed** in this repo (overrides the global "never commit plans" rule).
-- **Verification gate for every task:** `npx tsc --noEmit` · `npx vite build` · `npx eslint src/` · `npm test` — all green before moving on.
+- **Verification gate for every task:** `npm run build` · `npx eslint src/` · `npm test` — all green before moving on. Use **`npm run build`** (it runs `tsc -b && vite build`), NOT `npx tsc --noEmit` — the project-references build (`tsc -b`) is stricter and catches errors `--noEmit` misses (e.g. interface-vs-`Record` index-signature mismatches).
 - **Work in small PRs, one task at a time.** Update this file's status markers as you go.
 
 ---
@@ -62,7 +62,7 @@ This is the payoff of ADR-0003: adding to events is nearly free. Prefer riding t
 
 _Goal: the frame that lets every later feature slot in without cluttering the default UI or shipping garbage insights. No flashy user-facing output yet._
 
-### Task 0.1 — Enabled Event Types infrastructure (ADR-0004)
+### Task 0.1 — Enabled Event Types infrastructure (ADR-0004) ✅ DONE (PR #12, merged)
 
 - **Storage decision:** store the enabled set as a **`settings jsonb` column on the `babies` row** (rides the existing baby sync loop; no new synced table). Under "one baby per household" this is effectively per-household. _Trade-off to note in code:_ if true multi-baby/true per-household config is ever needed, promote to a household-level synced table — flagged, not now.
   - Server migration: `alter table babies add column settings jsonb not null default '{}';`
@@ -73,7 +73,7 @@ _Goal: the frame that lets every later feature slot in without cluttering the de
 - **Tests:** default set when unset; toggling persists; disabled type absent from `LogButtons`; historical events survive a disable.
 - **Done when:** a household with only `[feed, nappy]` enabled shows exactly two log buttons; flipping one on/off syncs across devices.
 
-### Task 0.2 — Insight strategy scaffold (ADR-0006)
+### Task 0.2 — Insight strategy scaffold (ADR-0006) ✅ DONE (`src/lib/insights/`)
 
 - New module `src/lib/insights/`. **No UI yet** — pure logic + the interface later phases plug into.
   - Define the strategy contract, e.g. `interface InsightStrategy { id: string; compute(input: InsightInput): Insight[] }` where `Insight` is `{ kind, fact: string, confidence?: number }` — copy is a *fact*, never advice (ADR-0005).
