@@ -104,6 +104,20 @@ export function NoteIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconPr
   )
 }
 
+export function PumpIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
+  // breast pump: a funnel/flange over a collection bottle, with a milk drop
+  return svg(
+    size,
+    color,
+    sw,
+    <>
+      <path d="M5 4.5h14l-3.2 6.5H8.2Z" />
+      <rect x="8.2" y="11" width="7.6" height="10" rx="2.4" />
+      <path d="M12 6.3c-.9 1.2-1.4 1.9-1.4 2.6a1.4 1.4 0 0 0 2.8 0c0-.7-.5-1.4-1.4-2.6Z" />
+    </>,
+  )
+}
+
 export function MoonIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
   // crescent moon for sleep
   return svg(size, color, sw, <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />)
@@ -174,5 +188,6 @@ export function EventIcon({
   if (type === 'growth') return <RulerIcon size={size} color={color} sw={sw} />
   if (type === 'sleep') return <MoonIcon size={size} color={color} sw={sw} />
   if (type === 'note') return <NoteIcon size={size} color={color} sw={sw} />
+  if (type === 'pumping') return <PumpIcon size={size} color={color} sw={sw} />
   return <PillIcon size={size} color={color} sw={sw} />
 }

@@ -54,10 +54,10 @@ export function buildFixture(now: Date): DevFixture {
     baby: {
       name: 'Robin',
       dateOfBirth: isoDate(dayAt(now, AGE_DAYS, 0)),
-      // Enable the defaults plus the opt-in Growth and Note types, so the demo shell
-      // shows the Growth trends card + page and the Note log button (both off by
-      // default per ADR-0004).
-      settings: { enabledEventTypes: [...DEFAULT_ENABLED_EVENT_TYPES, 'growth', 'note'] },
+      // Enable the defaults plus the opt-in Growth, Note and Pumping types, so the demo
+      // shell shows the Growth trends card + page and the Note/Pumping log buttons (all
+      // off by default per ADR-0004).
+      settings: { enabledEventTypes: [...DEFAULT_ENABLED_EVENT_TYPES, 'growth', 'note', 'pumping'] },
     },
     medications: [{ name: 'Vitamin D', defaultDose: 1, unit: 'drops' }],
     buildEvents(now, medicationIds) {
@@ -141,6 +141,15 @@ export function buildFixture(now: Date): DevFixture {
           const at = dayAt(now, d, 6, 30)
           const text = d === 0 ? 'First proper smile today ☺' : 'A bit unsettled overnight'
           add({ type: 'note', text, occurredAt: iso(at), createdAt: iso(at) })
+        }
+
+        // Pumping: an occasional expressing session (volume + side), so the type shows
+        // in History. Every ~3rd day carries no side, exercising the optional field.
+        if (d % 2 === 0) {
+          const at = dayAt(now, d, 15, 0)
+          const volumeMl = 120 + ((HISTORY_DAYS - d) % 4) * 30
+          const side = d % 6 === 0 ? undefined : SIDES[(d + 1) % SIDES.length]
+          add({ type: 'pumping', volumeMl, side, occurredAt: iso(at), createdAt: iso(at) })
         }
       }
 

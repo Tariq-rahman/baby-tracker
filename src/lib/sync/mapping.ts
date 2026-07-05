@@ -167,6 +167,8 @@ function packPayload(e: BabyEvent, ctx: EventToRowCtx): Record<string, unknown> 
       return { endedAt: e.endedAt }
     case 'note':
       return { text: e.text }
+    case 'pumping':
+      return { volumeMl: e.volumeMl, side: e.side ?? null }
   }
 }
 
@@ -248,5 +250,12 @@ export function eventFromRow(r: EventRow, ctx: EventFromRowCtx): WithoutId<BabyE
       return { ...base, type: 'sleep', endedAt: (p.endedAt as string | null) ?? null }
     case 'note':
       return { ...base, type: 'note', text: String(p.text ?? '') }
+    case 'pumping':
+      return {
+        ...base,
+        type: 'pumping',
+        volumeMl: Number(p.volumeMl),
+        ...(p.side != null ? { side: p.side as BreastSide } : {}),
+      }
   }
 }

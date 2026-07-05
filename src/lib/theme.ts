@@ -33,6 +33,7 @@ export const eventColor: Record<EventType, string> = {
   sleep: '#8C7BA0', // mauve — calm, night-ish; matches the AM band wash
   growth: '#6C8EA3', // dusty blue — a measurement hue, distinct from weight's sage
   note: '#B08968', // warm taupe — a neutral "jotting" hue, off to the side of the accents
+  pumping: '#C08497', // dusty rose — a "supply" hue, distinct from feed amber and sleep mauve
 }
 
 /** Short human label per event type. */
@@ -44,6 +45,7 @@ export const eventLabel: Record<EventType, string> = {
   sleep: 'Sleep',
   growth: 'Growth',
   note: 'Note',
+  pumping: 'Pumping',
 }
 
 /** CSS custom property backing each palette key. */
@@ -67,6 +69,7 @@ const EVENT_VARS: Record<EventType, string> = {
   sleep: '--sleep',
   growth: '--growth',
   note: '--note',
+  pumping: '--pumping',
 }
 
 /**

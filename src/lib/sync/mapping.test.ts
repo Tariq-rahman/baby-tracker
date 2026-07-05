@@ -307,6 +307,33 @@ describe('eventToRow (payload packing)', () => {
       },
       wantPayload: { text: 'first smile today' },
     },
+    {
+      name: 'pumping packs its volume and side',
+      event: {
+        type: 'pumping',
+        uid: 'e11',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        volumeMl: 120,
+        side: 'left',
+      },
+      wantPayload: { volumeMl: 120, side: 'left' },
+    },
+    {
+      name: 'pumping without a side packs it as null',
+      event: {
+        type: 'pumping',
+        uid: 'e12',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        volumeMl: 90,
+      },
+      wantPayload: { volumeMl: 90, side: null },
+    },
   ]
 
   for (const c of cases) {
@@ -448,6 +475,17 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       deletedAt: null,
       text: 'first smile today',
     },
+    {
+      type: 'pumping',
+      uid: 'e11',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      volumeMl: 120,
+      side: 'left',
+    },
   ]
 
   for (const e of events) {
@@ -456,6 +494,22 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       expect(back).toEqual(e)
     })
   }
+
+  it('round-trips a side-less pumping event without inventing a side field', () => {
+    const pumping = {
+      type: 'pumping' as const,
+      uid: 'e12',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      volumeMl: 90,
+    }
+    const back = eventFromRow(eventToRow(pumping, toCtx), fromCtx)
+    expect(back).toEqual(pumping)
+    expect(back).not.toHaveProperty('side')
+  })
 
   it('maps a dose with an unresolvable medication uid to medicationId 0', () => {
     const dose = events.find((e) => e.type === 'dose')!
