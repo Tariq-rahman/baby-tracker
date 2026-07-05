@@ -1,28 +1,29 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 11:40 · Branch: feat/breastfeeding @ 05bcb7c · Task 1.1 done, PR open_
+_Updated: 2026-07-05 12:05 · Branch: main @ 35be98d · Task 1.1 MERGED, Task 1.2 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.1 (Breastfeeding) is DONE on `feat/breastfeeding`** (`05bcb7c`), committed and pushed with a PR open. Full gate green (build, eslint, 202 tests). Next is Task 1.2 (Trends view) once 1.1 merges.
+**H1 Task 1.1 (Breastfeeding) is DONE and MERGED to `main`** (PR #14, merge `35be98d`). Working tree clean, on `main`. Full gate was green (build, eslint, 202 tests). Nothing in flight — next is Task 1.2 (Trends view) on a fresh branch off `main`. The merged `feat/breastfeeding` branch still exists locally + on origin and can be deleted.
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
 - **H0 Task 0.1 — Enabled Event Types** — merged (PR #12). Migration `0009_baby_settings.sql` applied to remote.
 - **H0 Task 0.2 — Insight strategy scaffold** — merged (PR #13, `6f30776`), pure logic, no UI. `src/lib/insights/` baseline helpers + runner; thresholds/windows are strategy params.
 - **Migration ledger reconciled** — `0008_cron_auth_key` backfilled (version `20260702184527`); ledger contiguous `0001`–`0009`; cron healthy.
-- **H1 Task 1.1 — Breastfeeding (ADR-0007)** — `05bcb7c`, PR open:
+- **H1 Task 1.1 — Breastfeeding (ADR-0007)** — MERGED (PR #14, merge `35be98d`; feature commit `05bcb7c`):
   - `FeedEvent` is now a discriminated union: `BottleFeedEvent` (`method?: 'bottle'`, `volumeMl`+`content`) | `BreastFeedEvent` (`method: 'breast'`, `side`, `endedAt`). `method` optional on bottle ⇒ **legacy rows read as bottles, no Dexie/server migration**; all in `payload`.
   - `mapping.ts` branches on method, defaults no-method payloads to bottle. `storage.ts` `startBreastFeed`/`stopBreastFeed`. `stats.ts` NaN guard + `getRunningBreastFeed`/`isFlaggedBreastFeed`/`nursingMinutesForDay`/`isBreastFeed`.
   - UI: `FeedSheet` (bottle/breast toggle) wraps body-only `BottleSheet` + new `BreastSheet` (timer + side chips). `RunningSleepBanner` → generic `RunningBanner`; both sleep and breast-feed banners render. One running breast feed enforced.
   - +13 tests (mapping legacy default, breast round-trips, storage start/stop, nursing aggregation, running/flag detection, feedCount-not-volume). Suite 202, all green.
 
 ## Next
-1. **H1 Task 1.2 — Trends view** (see plan §"Task 1.2"). Start after 1.1 merges (branch off `main`).
-2. Then Task 1.3 (first reflective insights — concrete strategies against the 0.2 scaffold, branching on method).
-3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
+1. **Quick tidy:** delete the merged `feat/breastfeeding` branch — `git branch -d feat/breastfeeding` and `git push origin --delete feat/breastfeeding` (push needs sandbox disabled).
+2. **H1 Task 1.2 — Trends view** (see plan §"Task 1.2"). Branch off `main` (`feat/trends`), scope from the plan, then TDD. Not yet read this session — start by reading the plan's Task 1.2 section.
+3. Then Task 1.3 (first reflective insights — concrete strategies against the 0.2 scaffold, branching on method).
+4. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
 - **Insight/aggregation code must branch on `method` — never read a breast feed's absent `volumeMl` as 0/NaN.** `getDailyTotals` now counts a breast feed toward `feedCount` but skips its volume. Volume insights stay bottle-only; breastfeeding gets frequency / nursing-minutes. #1 gotcha for Task 1.3.
