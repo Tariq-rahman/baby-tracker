@@ -1,12 +1,13 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 15:45 · Branch: main (local checkpoint unpushed) · Task 1.3 + fix MERGED & VERIFIED live (PRs #16, #17); Task 1.4 next_
+_Updated: 2026-07-05 15:30 · Branch: feat/dark-mode (pushed, 45716e9) · Task 1.4 dark mode DONE, PR #18 open — awaiting live visual verify; Task 1.5 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.3 (first reflective insights) is DONE, MERGED and VERIFIED live** (PR #16 + fix PR #17, merge `1aeb4d3`). Working tree clean, on `main`. Full gate green: `npm run build`, `eslint`, **246 tests**. The Trends **feed** card renders honest reflective insights against real data — user confirmed the fix works on the live Vercel deploy. Next is Task 1.4 (dark mode) on a fresh branch off `main`.
+**H1 Task 1.4 (dark mode) is DONE and PR #18 is open** on `feat/dark-mode` (`45716e9`), off `main`. Gate green: `npm run build`, `npx eslint src/`, **264 tests**. Light/Dark/System selectable in Settings → Appearance; defaults to OS preference; override persisted device-only. **Awaiting live visual verification** on the Vercel deploy (clock arcs/markers, day/night washes, charts, no-flash on dark reload). After merge, Task 1.5 (Settings restructure) is next.
+(Task 1.3 first reflective insights: DONE, MERGED, VERIFIED live — PRs #16/#17.)
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -29,11 +30,27 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - **Compared an in-progress day.** Was `todaySum` vs baseline → a partial day always read "below". Now compares **yesterday** (`lastCompleteDay` + `daySum`) vs a baseline over **complete days only** (today excluded from both). Copy: "Yesterday's bottles (X ml) were …".
   - `FeedInsightConfig.gate` → `minEvents` (full-window history is the binding gate). +10 tests, suite 246.
 
+- **H1 Task 1.4 — Dark mode** — PR #18 open (`feat/dark-mode`, `45716e9`):
+  - **Single source of truth = CSS custom properties** in `src/index.css` (`:root` light / `.dark` dark), incl. the body radial-gradient (`--app-bg`). `tailwind.config.js` → `darkMode: 'class'` + named colours point at `var(--…)`.
+  - `theme.ts` keeps the same importable `palette`/`eventColor` objects (mutated in place, never reassigned → ~20 consumers untouched); `refreshPaletteFromCss()` re-reads the resolved vars via `getComputedStyle` on every theme flip. The alpha-tint idiom (`` `${col}55` ``) still works because values stay real hex.
+  - `src/lib/theme-context.ts` (pure helpers + context + `useTheme` — split out so `ThemeProvider.tsx` only exports a component, satisfying `react-refresh/only-export-components`) + `ThemeProvider.tsx`. Persists override to **device-only** `localStorage['bt.theme']` (NOT synced). Follows `prefers-color-scheme` live while on *system*.
+  - `index.html` inline script sets `.dark` + `meta[theme-color]` **before first paint** (no flash); `main.tsx` calls `initTheme()` before render so the JS palette matches the stylesheet on first paint.
+  - Settings → **Appearance** card (Light/Dark/System segmented control). Fixed hardcoded hex that duplicated palette values (EventList/WeightPage row borders, Trends/Weight chevrons, Header avatar gradient).
+  - +18 tests (resolveTheme/readStoredChoice tables + ThemeProvider behaviour), suite 246 → 264.
+
+## Done (out of roadmap — bug fixes on main)
+- **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
+
 ## Next
-1. **H1 Task 1.4 — Dark mode** (see plan §"Task 1.4"). Fresh branch off `main`.
+1. **Verify Task 1.4 live** on the Vercel deploy of PR #18 — toggle Light/Dark/System; check clock arcs/markers, day/night band washes, Trends + Weight charts in both themes, and no white flash on a hard reload with a dark OS preference. Then merge #18.
+2. **H1 Task 1.5 — Settings restructure (light)** (see plan §"Task 1.5"). Fresh branch off `main` after #18 merges.
 3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
+- **Task 1.4 — colours live in two worlds; CSS vars are the bridge.** Tailwind static classes (CSS-land) and `theme.ts` runtime hex (JS-land) both now resolve from the same `:root`/`.dark` custom properties. Any *new* colour must be added in **three** spots to stay in sync: the `:root` + `.dark` var blocks in `index.css`, and (if read at runtime) the `PALETTE_VARS`/`EVENT_VARS` maps in `theme.ts`. Note `eventColor.dose` reads `--meds` (the Tailwind colour is named `meds`, the event type is `dose`).
+- **Task 1.4 — why the palette objects are mutated, not React state.** ~20 files `import { palette, eventColor }` directly for SVG/chart fills and the `` `${col}55` `` alpha-concat idiom (which *requires* real hex, so these can't be `dark:` classes). Rewiring all of them to a hook was too invasive; instead `refreshPaletteFromCss()` mutates the objects in place and the ThemeProvider (mounted above `<App>` in `main.tsx`) re-renders the tree so consumers re-read. Gotcha: a plain mount `useEffect`+`setState` to force the re-read trips `react-hooks/set-state-in-effect` — solved by applying the palette *before* React renders (`initTheme()` in main.tsx) + a no-setState `useLayoutEffect` in the provider for self-sufficiency (tests).
+- **Task 1.4 — theme is device-only, deliberately not synced** (`localStorage['bt.theme']`, key mirrored in the index.html inline script). A bedside phone may want dark while the kitchen tablet stays light. `system` = remove the key (no override).
+- **Task 1.4 — a few overlays stay theme-agnostic on purpose:** the Toast is a fixed dark chip (white text needs a dark bg in *both* themes — switching it to `palette.ink` would make it off-white in dark and break contrast) and the sheet scrim is a dimming layer. Left hardcoded intentionally.
 - **Task 1.3 gating decision:** a strategy returns `[]` (silent) when its method has *zero* events, vs `insufficient-data` ("keep logging") when the method is used but below the sufficiency gate. So a bottle-only family never sees an empty "not enough nursing data" line. Distinction: empty = "you don't do this"; insufficient-data = "you do this, not enough history yet".
 - **Task 1.3 baseline window is fixed 7d** (`DEFAULT_FEED_CONFIG`), independent of the Trends page's 7d/30d/All chart selector — the baseline is the baby's own recent normal (ADR-0006), not the viewed range.
 - **Task 1.3 copy safety:** `compareDirection` only ever emits `below`/`above`/`about the same as`; a test asserts facts never contain `enough`/`normal`/`should`/`ok` (ADR-0005). Copy is authored in the strategies, never in `InsightList`.
@@ -53,6 +70,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
 ## Key files & links
 - Plan (start here): [2026-07-03-roadmap-implementation.md](docs/superpowers/plans/2026-07-03-roadmap-implementation.md)
 - ADR: [0007 breast feed as a feed method](docs/adr/0007-breast-feed-as-feed-method-reusing-duration-pattern.md) · [0006 insights baseline](docs/adr/0006-insight-data-sufficiency-and-baseline.md) · [0005 reflective line](docs/adr/0005-reflective-insights-mirror-not-doctor.md)
+- Task 1.4 files: [theme.ts](src/lib/theme.ts) (mutable palette + `refreshPaletteFromCss`) · [theme-context.ts](src/lib/theme-context.ts) (helpers + `useTheme` + `initTheme`) · [ThemeProvider.tsx](src/lib/ThemeProvider.tsx) · [index.css](src/index.css) (`:root`/`.dark` vars) · [tailwind.config.js](tailwind.config.js) · [index.html](index.html) (pre-paint script) · [SettingsPage.tsx](src/pages/SettingsPage.tsx) (Appearance card) · PR #18
 - Task 1.3 files: [strategies.ts](src/lib/insights/strategies.ts) + [strategies.test.ts](src/lib/insights/strategies.test.ts) (the 3 concrete strategies) · [baseline.ts](src/lib/insights/baseline.ts) (added `localDay`/`todaySum`/`compareDirection`) · [InsightList.tsx](src/components/InsightList.tsx) · [TrendsPage.tsx](src/pages/TrendsPage.tsx:56) (runs strategies, feeds the card slot)
 - Task 1.2 files: [trends.ts](src/lib/trends.ts) + [trends.test.ts](src/lib/trends.test.ts) (pure aggregation) · [TrendCard.tsx](src/components/TrendCard.tsx) (small-multiple card, has the `insight` slot) · [TrendsPage.tsx](src/pages/TrendsPage.tsx) · [App.tsx](src/App.tsx) (nav+route swap) · [WeightPage.tsx](src/pages/WeightPage.tsx:38) (back link)
 - Task 1.1 shipped files: [schema.ts](src/db/schema.ts) · [mapping.ts](src/lib/sync/mapping.ts) · [storage.ts](src/db/storage.ts) · [stats.ts](src/lib/stats.ts) · [FeedSheet.tsx](src/components/sheets/FeedSheet.tsx) · [BreastSheet.tsx](src/components/sheets/BreastSheet.tsx) · [RunningBanner.tsx](src/components/RunningBanner.tsx)

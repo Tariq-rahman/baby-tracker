@@ -4,8 +4,31 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/png" href="/icon-192.png" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#2563eb" />
+    <meta name="theme-color" content="#FBF3EA" />
     <title>Baby Tracker</title>
+    <!--
+      Set the theme before first paint so dark-preference users never get a white
+      flash (this is a 3am-feed feature). Mirrors src/lib/ThemeProvider.tsx — keep
+      the storage key and dark meta-colour in sync.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var choice = localStorage.getItem('bt.theme')
+          var dark =
+            choice === 'dark' ||
+            ((choice === null || choice === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) {
+            document.documentElement.classList.add('dark')
+            var meta = document.querySelector('meta[name="theme-color"]')
+            if (meta) meta.setAttribute('content', '#1C1613')
+          }
+        } catch (e) {
+          /* ignore — falls back to light */
+        }
+      })()
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -1,5 +1,5 @@
 import type { BabyEvent, Medication } from '../db/schema'
-import { eventColor, eventLabel } from '../lib/theme'
+import { eventColor, eventLabel, palette } from '../lib/theme'
 import { fmtClock, relativeTime } from '../lib/format'
 import { formatSleepDuration } from '../lib/stats'
 import { gramsToKg } from '../lib/units'
@@ -51,7 +51,7 @@ export default function EventList({ events, now, medications, onSelect, emptyTex
             key={ev.id}
             onClick={() => onSelect(ev)}
             className="press flex w-full items-center gap-3 px-4 py-3 text-left"
-            style={{ borderTop: i === 0 ? 'none' : '1px solid #FBF3EA' }}
+            style={{ borderTop: i === 0 ? 'none' : `1px solid ${palette.cream}` }}
           >
             <span
               className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"

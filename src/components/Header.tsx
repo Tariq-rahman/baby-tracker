@@ -1,5 +1,6 @@
 import type { Baby } from '../db/schema'
 import { ageLabel } from '../lib/format'
+import { eventColor } from '../lib/theme'
 import StatStrip, { type Stat } from './StatStrip'
 
 interface Props {
@@ -25,8 +26,8 @@ export default function Header({ baby, now, stats, hint }: Props) {
         <div
           className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full text-xl font-bold text-white"
           style={{
-            background: 'linear-gradient(135deg, #E29A3C, #C25A40)',
-            boxShadow: '0 6px 16px #C25A4044',
+            background: `linear-gradient(135deg, ${eventColor.feed}, ${eventColor.dose})`,
+            boxShadow: `0 6px 16px ${eventColor.dose}44`,
           }}
         >
           {name.charAt(0).toUpperCase()}
