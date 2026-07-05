@@ -19,13 +19,18 @@ const navItems = [
 export default function App() {
   return (
     <AuthGate>
-      <AuthedApp />
+      <AppShell />
     </AuthGate>
   )
 }
 
-/** The signed-in app. Runs background sync (mounts only when authenticated). */
-function AuthedApp() {
+/**
+ * The signed-in app: routes, nav, and background sync. Exported so the dev entry
+ * point (`main.dev.tsx`) can mount it directly, skipping `AuthGate`. `useSync`
+ * no-ops without a session, so the shell renders inert-sync in dev. See the
+ * DX plan (docs/superpowers/plans/2026-07-05-developer-experience.md).
+ */
+export function AppShell() {
   useSync()
   return (
     <>

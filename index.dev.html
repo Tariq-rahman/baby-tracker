@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/png" href="/icon-192.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#FBF3EA" />
+    <title>Baby Tracker (dev)</title>
+    <!--
+      DEV ENTRY POINT — visual-check loop only (DX.1). Loads main.dev.tsx, which
+      skips AuthGate and seeds Dexie. This file is NOT in Vite's build input, so
+      it and main.dev.tsx are physically absent from the prod bundle.
+
+      Set the theme before first paint so dark-preference users never get a white
+      flash. Mirrors index.html — keep the storage key and dark meta-colour in sync.
+    -->
+    <script>
+      ;(function () {
+        try {
+          var choice = localStorage.getItem('bt.theme')
+          var dark =
+            choice === 'dark' ||
+            ((choice === null || choice === 'system') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches)
+          if (dark) {
+            document.documentElement.classList.add('dark')
+            var meta = document.querySelector('meta[name="theme-color"]')
+            if (meta) meta.setAttribute('content', '#1C1613')
+          }
+        } catch (e) {
+          /* ignore — falls back to light */
+        }
+      })()
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.dev.tsx"></script>
+  </body>
+</html>

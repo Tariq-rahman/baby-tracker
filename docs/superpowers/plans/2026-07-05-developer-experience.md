@@ -1,6 +1,6 @@
 # Implementation Plan: Developer Experience & Testability (DX)
 
-_Status: not started · Created 2026-07-05 · Distilled from a grilling session on 2026-07-05 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
+_Status: DX.1 ✅ shipped (local visual-check loop) · DX.2 not started · Created 2026-07-05 · Distilled from a grilling session on 2026-07-05 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
 
 > **You are a fresh agent.** Read the Orientation first. Every decision below is already settled (recorded here + in ROADMAP's DX phase) — implement, don't relitigate. Where a decision is security-sensitive it says **SECURITY** — honour it exactly.
 
@@ -40,27 +40,29 @@ Two concrete pains motivated this:
 
 ---
 
-## DX.1 — Local visual-check loop
+## DX.1 — Local visual-check loop ✅ DONE
 
-### Task DX.1.1 — Extract the app shell
+_Shipped: `AppShell` export, `index.dev.html`/`main.dev.tsx` dev entry, `src/dev/fixture.ts` + `seedDevData()`, and `npm run shots` (Playwright, light+dark, 5 screens → gitignored `screenshots/`). Verified: all screens render seeded, insights fire, prod `dist/` carries no dev-entry code. One-time setup: `npx playwright install chromium`._
+
+### Task DX.1.1 — Extract the app shell ✅
 
 - In `src/App.tsx`, the route+nav shell is the private `AuthedApp`. Export it (rename to `AppShell` for clarity) so a non-`AuthGate` entry can mount it. `App` itself stays `<AuthGate><AppShell/></AuthGate>` — unchanged behaviour.
 - **Done when:** prod entry renders identically; `AppShell` is importable; build + tests green.
 
-### Task DX.1.2 — Dev entry point
+### Task DX.1.2 — Dev entry point ✅
 
 - Add `index.dev.html` (copy of `index.html`, but `<script src="/src/main.dev.tsx">`; keep the pre-paint theme script).
 - Add `src/main.dev.tsx`: same provider stack as `main.tsx` (`initTheme()`, `ThemeProvider`, `BrowserRouter`) but renders `<AppShell/>` directly — **no `AuthGate`**. Before render, `await seedDevData()` (idempotent).
 - **SECURITY:** do **not** add `index.dev.html` to Vite's `build.rollupOptions.input`. Confirm `npm run build` emits no `main.dev` chunk (grep `dist/`). Committing the file is fine — it's a dev-server entry, not a build input.
 - **Done when:** `npm run dev` → open `/index.dev.html` → app renders past the gate with seeded data; `dist/` after a prod build contains no dev-entry code.
 
-### Task DX.1.3 — Shared fixture + Dexie seed
+### Task DX.1.3 — Shared fixture + Dexie seed ✅
 
 - `src/dev/fixture.ts`: a demo baby + ~10 days of events anchored to `new Date()` — bottle **and** breast feeds, nappies, sleep (incl. one recently-ended so resume/patterns show), doses, weight entries. Enough that every screen is non-empty and every insight fires (needs a full 7-day window + a complete "yesterday" — see [ADR-0006](../../adr/0006-insight-data-sufficiency-and-baseline.md)).
 - `src/dev/seed.ts` `seedDevData()`: idempotent (clear the dev DB or guard on a marker), writes the fixture **through `src/db/storage.ts`** (not raw Dexie) so it goes through the real abstraction.
 - **Done when:** a freshly seeded app shows populated Home dial, History, Trends (with insights firing), Weight; re-running the seed doesn't duplicate.
 
-### Task DX.1.4 — Playwright screenshot harness
+### Task DX.1.4 — Playwright screenshot harness ✅
 
 - Add `@playwright/test` (devDep). Script `npm run shots`: boot the dev server, visit `/`, `/history`, `/trends`, `/weight`, `/settings` in **light and dark**, write PNGs to a **gitignored** dir (`screenshots/`). Chromium, headless.
 - Not an assertion suite — respects the project's "No E2E for the MVP" stance ([CLAUDE.md](../../../CLAUDE.md)). Not wired into CI.
