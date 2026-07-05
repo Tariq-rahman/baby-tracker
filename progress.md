@@ -1,12 +1,12 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 15:30 · Branch: feat/dark-mode (pushed, 45716e9) · Task 1.4 dark mode DONE, PR #18 open — awaiting live visual verify; Task 1.5 next_
+_Updated: 2026-07-05 16:20 · Branch: main (54785c3) · Task 1.4 dark mode MERGED & VERIFIED live (PR #18); Task 1.5 next_
 
 ## Goal
 Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
 
 ## Status
-**H1 Task 1.4 (dark mode) is DONE and PR #18 is open** on `feat/dark-mode` (`45716e9`), off `main`. Gate green: `npm run build`, `npx eslint src/`, **264 tests**. Light/Dark/System selectable in Settings → Appearance; defaults to OS preference; override persisted device-only. **Awaiting live visual verification** on the Vercel deploy (clock arcs/markers, day/night washes, charts, no-flash on dark reload). After merge, Task 1.5 (Settings restructure) is next.
+**H1 Task 1.4 (dark mode) is DONE, MERGED and VERIFIED live** (PR #18, on `main` at `54785c3`). Working tree clean, on `main`. Gate green: `npm run build`, `npx eslint src/`, **264 tests**. Light/Dark/System in Settings → Appearance; defaults to OS preference; override persisted device-only; no flash on dark reload — user confirmed the deploy looks good. Task 1.5 (Settings restructure) is next, on a fresh branch off `main`.
 (Task 1.3 first reflective insights: DONE, MERGED, VERIFIED live — PRs #16/#17.)
 
 ## Done
@@ -42,8 +42,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
 - **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
 
 ## Next
-1. **Verify Task 1.4 live** on the Vercel deploy of PR #18 — toggle Light/Dark/System; check clock arcs/markers, day/night band washes, Trends + Weight charts in both themes, and no white flash on a hard reload with a dark OS preference. Then merge #18.
-2. **H1 Task 1.5 — Settings restructure (light)** (see plan §"Task 1.5"). Fresh branch off `main` after #18 merges.
+1. **H1 Task 1.5 — Settings restructure (light)** (see plan §"Task 1.5"). Fresh branch off `main`.
 3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
 
 ## Context & decisions
