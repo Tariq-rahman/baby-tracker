@@ -58,6 +58,17 @@ _Distilled from a grilling session on 2026-07-03. Terms in **bold** are defined 
 - **Pumping** — duration + volume event; matters to the expressing segment.
 - **Free-text Note** — deliberately minimal ("rash today"); guard against it becoming a dumping ground.
 
+### DX — Developer experience & testability (cross-cutting; do DX.1 now)
+_Not a product horizon — tooling that unblocks building the rest. Plan: [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md). Distilled from a grilling session on 2026-07-05._
+
+- **DX.1 — Local visual-check loop** (self-contained, in-sandbox, no cost — ship first):
+  - **Dev entry point** — `index.dev.html` → `main.dev.tsx` renders the app shell **skipping `AuthGate`**. Structurally absent from the prod build (not a flag or runtime toggle), so the bypass can never ship enabled.
+  - **Seeded local data** — one shared TS fixture (`src/dev/fixture.ts`) written to Dexie via `storage.ts`, anchored to *now* so every screen is populated and insights fire.
+  - **Playwright screenshot script** (`npm run shots`) — visits each route in light + dark, writes gitignored PNGs so AI (and you) can *see* UI changes. Eyes, not an assertion suite; no CI gating (keeps the MVP "no E2E" line).
+- **DX.2 — Staging + test account** (backend-side, later; free-tier cloud footprint):
+  - **Dedicated staging Supabase project** + automatic **Vercel preview** deploys wired to it; **prod is never the test target**. Migrations land on staging first.
+  - **Test account** — a real inbox + magic link (no password auth); its data seeded from the *same* fixture via `npm run seed:staging`, guarded to refuse the prod ref.
+
 ## Explicit non-goals (protecting the wedge)
 - Population-norm comparisons ("is my baby normal vs others") — advisory and anxiety-inducing. ([0005](docs/adr/0005-reflective-insights-mirror-not-doctor.md))
 - Reaction *severity* / medical triage logging for allergens.

@@ -1,13 +1,14 @@
 # Progress: Roadmap implementation
 
-_Updated: 2026-07-05 16:20 · Branch: main (54785c3) · Task 1.4 dark mode MERGED & VERIFIED live (PR #18); Task 1.5 next_
+_Updated: 2026-07-05 17:40 · Branch: feat/settings-sections (37a4fdb) · Task 1.5 Settings restructure DONE, PR #19 OPEN; DX phase planned; next = DX.1 (or Task 1.6)_
 
 ## Goal
-Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan).
+Implement the roadmap (H0–H4) one task/PR at a time, per the implementation plan. Planning lives on `main` (ROADMAP.md, ADRs, plan). A cross-cutting **DX phase** (developer experience / testability) was added 2026-07-05.
 
 ## Status
-**H1 Task 1.4 (dark mode) is DONE, MERGED and VERIFIED live** (PR #18, on `main` at `54785c3`). Working tree clean, on `main`. Gate green: `npm run build`, `npx eslint src/`, **264 tests**. Light/Dark/System in Settings → Appearance; defaults to OS preference; override persisted device-only; no flash on dark reload — user confirmed the deploy looks good. Task 1.5 (Settings restructure) is next, on a fresh branch off `main`.
-(Task 1.3 first reflective insights: DONE, MERGED, VERIFIED live — PRs #16/#17.)
+**H1 Task 1.5 (Settings restructure) is DONE — PR #19 OPEN** ([#19](https://github.com/Tariq-rahman/baby-tracker/pull/19), branch `feat/settings-sections`, commit `37a4fdb`). Gate green: `npm run build`, `npx eslint src/` clean, **264 tests**. Pure restructure of `SettingsPage.tsx` into six labelled sections (Baby & Household · Tracking · Notifications · Appearance · Data · Account). ⚠️ **Not visually verified** — no browser automation in this env; needs eyeballing on the deploy preview (this is exactly what the new DX.1 fixes).
+Also this session: **grilled + planned the DX phase** (browser automation for AI visual checks, seeded data, login bypass, staging) — see the plan + roadmap. No DX code written yet.
+(Task 1.4 dark mode: DONE, MERGED, VERIFIED live — PR #18, `54785c3`.)
 
 ## Done
 - **Planning** — ROADMAP.md, CONTEXT.md glossary, ADRs 0004–0008, implementation plan. On `main`.
@@ -38,12 +39,19 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
   - Settings → **Appearance** card (Light/Dark/System segmented control). Fixed hardcoded hex that duplicated palette values (EventList/WeightPage row borders, Trends/Weight chevrons, Header avatar gradient).
   - +18 tests (resolveTheme/readStoredChoice tables + ThemeProvider behaviour), suite 246 → 264.
 
+- **H1 Task 1.5 — Settings restructure (light)** — PR #19 open (`feat/settings-sections`, `37a4fdb`). New `Section` wrapper (muted uppercase header) groups related cards; `Card` title now optional (single-card sections drop the redundant title). Grouped: Baby+Sharing → Baby & Household; Event types (renamed from "Tracking") + Medications → Tracking; Feed reminders → Notifications; theme → Appearance; backup → Data; sign-out → Account. Pure `SettingsPage.tsx` restructure, no behaviour change. Suite still 264.
+
+- **DX phase — grilled & planned** (not built). New plan [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md) + a DX section in ROADMAP.md. Settled: AI visual-check loop runs **local, no backend**; login bypass = **separate dev entry** (`main.dev.tsx`/`index.dev.html`) absent from the prod build; **Playwright `npm run shots`** (eyes, no CI); **one shared TS fixture** seeds Dexie + staging; **dedicated staging Supabase + Vercel previews**, prod never the test target; staging test account = **real inbox + magic link** (no password auth).
+
 ## Done (out of roadmap — bug fixes on main)
 - **Clock sleep-arc day boundary** — committed `f384f55`, pushed to `main` directly (no PR, user pushed). Sleep arcs on the home dial used a rolling `now−24h` window while point markers clip to the current calendar day, so a sleep that started yesterday evening rendered its pre-midnight portion on the outer PM ring as if it were tonight. Fixed `sleepArcSegments` (`src/lib/clock.ts`) to clip to local midnight of the current day; removed the now-unused `ARC_WINDOW_MS`; updated the two tests that encoded the old window. Gate green (24 clock tests, `npm run build`).
 
 ## Next
-1. **H1 Task 1.5 — Settings restructure (light)** (see plan §"Task 1.5"). Fresh branch off `main`.
+1. **Merge PR #19** (Settings sections) once eyeballed. Then fresh branch off `main`.
+2. **DX.1 — Local visual-check loop** (recommended next — unblocks visual verification for all future UI work). Per the DX plan: extract `AppShell` from `App.tsx` → add `index.dev.html`/`main.dev.tsx` (skip `AuthGate`) → `src/dev/fixture.ts` + `seedDevData()` → Playwright `npm run shots`. Self-contained, in-sandbox, no cost.
+   - _Alternative:_ **H1 Task 1.6 — Duration-event resume** (QoL) continues the product roadmap instead.
 3. **Deferred (Phase 2 edge-function work):** feed reminders' "last feed" must be the last feed of *either* method — a nursing session counts. `getLastEventOfType(events,'feed')` already returns either method client-side; the `feed-reminder` Edge Function needs the same treatment server-side.
+4. **DX.2 — Staging + test account** (later; backend-side) — see DX plan.
 
 ## Context & decisions
 - **Task 1.4 — colours live in two worlds; CSS vars are the bridge.** Tailwind static classes (CSS-land) and `theme.ts` runtime hex (JS-land) both now resolve from the same `:root`/`.dark` custom properties. Any *new* colour must be added in **three** spots to stay in sync: the `:root` + `.dark` var blocks in `index.css`, and (if read at runtime) the `PALETTE_VARS`/`EVENT_VARS` maps in `theme.ts`. Note `eventColor.dose` reads `--meds` (the Tailwind colour is named `meds`, the event type is `dose`).
@@ -68,6 +76,7 @@ Implement the roadmap (H0–H4) one task/PR at a time, per the implementation pl
 
 ## Key files & links
 - Plan (start here): [2026-07-03-roadmap-implementation.md](docs/superpowers/plans/2026-07-03-roadmap-implementation.md)
+- DX plan (tooling): [2026-07-05-developer-experience.md](docs/superpowers/plans/2026-07-05-developer-experience.md) · roadmap "DX" section
 - ADR: [0007 breast feed as a feed method](docs/adr/0007-breast-feed-as-feed-method-reusing-duration-pattern.md) · [0006 insights baseline](docs/adr/0006-insight-data-sufficiency-and-baseline.md) · [0005 reflective line](docs/adr/0005-reflective-insights-mirror-not-doctor.md)
 - Task 1.4 files: [theme.ts](src/lib/theme.ts) (mutable palette + `refreshPaletteFromCss`) · [theme-context.ts](src/lib/theme-context.ts) (helpers + `useTheme` + `initTheme`) · [ThemeProvider.tsx](src/lib/ThemeProvider.tsx) · [index.css](src/index.css) (`:root`/`.dark` vars) · [tailwind.config.js](tailwind.config.js) · [index.html](index.html) (pre-paint script) · [SettingsPage.tsx](src/pages/SettingsPage.tsx) (Appearance card) · PR #18
 - Task 1.3 files: [strategies.ts](src/lib/insights/strategies.ts) + [strategies.test.ts](src/lib/insights/strategies.test.ts) (the 3 concrete strategies) · [baseline.ts](src/lib/insights/baseline.ts) (added `localDay`/`todaySum`/`compareDirection`) · [InsightList.tsx](src/components/InsightList.tsx) · [TrendsPage.tsx](src/pages/TrendsPage.tsx:56) (runs strategies, feeds the card slot)
