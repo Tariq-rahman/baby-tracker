@@ -54,16 +54,15 @@ describe('sleepArcSegments', () => {
     ])
   })
 
-  it('overnight sleep splits into evening (PM/outer) then morning (AM/inner)', () => {
+  it('overnight sleep is clipped at midnight → only the morning (AM/inner) piece', () => {
+    // Started yesterday 22:00, ended 07:00 today. The pre-midnight evening portion
+    // is not part of today, so it must not appear on the PM ring — only 00:00→07:00.
     const segs = sleepArcSegments(
       d('2026-06-09T22:00:00Z'),
       d('2026-06-10T07:00:00Z'),
       d('2026-06-10T08:00:00Z'),
     )
-    expect(segs).toEqual([
-      { track: 'pm', deg1: 300, deg2: 360 },
-      { track: 'am', deg1: 0, deg2: 210 },
-    ])
+    expect(segs).toEqual([{ track: 'am', deg1: 0, deg2: 210 }])
   })
 
   it('running sleep uses end = now', () => {
@@ -75,25 +74,25 @@ describe('sleepArcSegments', () => {
     expect(segs).toEqual([{ track: 'pm', deg1: 30, deg2: 90 }])
   })
 
-  it('clips to the 24h window and never exceeds a full band (360°)', () => {
-    // 24h sleep, only the last 24h is visible → start pulled to now−24h (07:00).
+  it('clips to the start of the current day and never exceeds a full band (360°)', () => {
+    // Long sleep starting yesterday; only today (from midnight) is visible. The
+    // whole AM band fills to 360°, then a short PM piece from noon to now (13:00).
     const segs = sleepArcSegments(
       d('2026-06-09T06:00:00Z'),
-      d('2026-06-10T06:00:00Z'),
-      d('2026-06-10T07:00:00Z'),
+      d('2026-06-10T13:00:00Z'),
+      d('2026-06-10T13:00:00Z'),
     )
     expect(segs).toEqual([
-      { track: 'am', deg1: 210, deg2: 360 },
-      { track: 'pm', deg1: 0, deg2: 360 },
-      { track: 'am', deg1: 0, deg2: 180 },
+      { track: 'am', deg1: 0, deg2: 360 },
+      { track: 'pm', deg1: 0, deg2: 30 },
     ])
     for (const s of segs) expect(s.deg2).toBeLessThanOrEqual(360)
   })
 
-  it('returns [] for a sleep entirely before the window', () => {
+  it('returns [] for a sleep entirely before today', () => {
     const segs = sleepArcSegments(
-      d('2026-06-08T02:00:00Z'), // ~30h before now
-      d('2026-06-08T06:00:00Z'), // ~26h before now
+      d('2026-06-08T02:00:00Z'), // yesterday
+      d('2026-06-08T06:00:00Z'), // yesterday
       d('2026-06-09T08:00:00Z'),
     )
     expect(segs).toEqual([])

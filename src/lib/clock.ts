@@ -40,9 +40,6 @@ export function arcPath(cx: number, cy: number, r: number, deg1: number, deg2: n
   return `M ${p1.x} ${p1.y} A ${r} ${r} 0 ${largeArc} 1 ${p2.x} ${p2.y}`
 }
 
-/** How long the clock looks back for arcs: sleeps overlapping the last 24h. */
-export const ARC_WINDOW_MS = 24 * 60 * 60 * 1000
-
 /** One clock-arc piece: a stretch of sleep lying entirely within one 12h band. */
 export interface SleepArcSegment {
   track: 'am' | 'pm'
@@ -64,15 +61,25 @@ function bandStart(d: Date, band: 'am' | 'pm'): Date {
 /**
  * Split a sleep interval [start, end] into per-band arc segments for the dial.
  * `end` is the caller's chosen end (pass `now` for a running sleep). The interval
- * is first clipped to the render window [now − 24h, now]; the visible remainder
- * is cut at every local noon/midnight crossing so each piece lies in exactly one
- * band. Angles are measured clockwise from 12 within that band, so a piece that
- * runs to the boundary reads as 360° (a full band) rather than folding back to 0.
- * A piece that would exceed one band is clamped to 360° defensively.
- * Returns [] when the sleep does not overlap the window.
+ * is first clipped to the current local day [start-of-today-midnight, now] — the
+ * same "today only" boundary the point-event markers use — so a sleep that began
+ * yesterday evening shows only its portion from midnight, not on the PM ring as
+ * if it were tonight. The visible remainder is cut at every local noon/midnight
+ * crossing so each piece lies in exactly one band. Angles are measured clockwise
+ * from 12 within that band, so a piece that runs to the boundary reads as 360°
+ * (a full band) rather than folding back to 0. A piece that would exceed one band
+ * is clamped to 360° defensively. Returns [] when the sleep does not overlap today.
  */
 export function sleepArcSegments(start: Date, end: Date, now: Date): SleepArcSegment[] {
-  const windowStart = now.getTime() - ARC_WINDOW_MS
+  const windowStart = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+    0,
+    0,
+    0,
+    0,
+  ).getTime()
   let s = Math.max(start.getTime(), windowStart)
   const e = Math.min(end.getTime(), now.getTime())
   if (s >= e) return []

@@ -31,7 +31,8 @@ export default function Clock({ size = 296, events, now, centerTime, centerAmpm 
   const handTip = polar(cx, cy, bandRadius(now, innerR, outerR), nowDeg)
 
   // Sleep arcs: each sleep (running → end = now) becomes per-band segments,
-  // windowed to the last 24h. The running sleep gets a pulsing tip at its leading edge.
+  // clipped to today (from local midnight), matching the point markers. The
+  // running sleep gets a pulsing tip at its leading edge.
   const runningSleep = getRunningSleep(events)
   const sleepCol = eventColor.sleep
   const trackR = (track: 'am' | 'pm') => (track === 'pm' ? outerR : innerR)
