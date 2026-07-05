@@ -1,6 +1,6 @@
 # Implementation Plan: Roadmap (H0–H4)
 
-_Status: Phase 0 ✅ · Phase 1 (H1) ✅ Tasks 1.1–1.6 (PRs #12–#20 merged) — H1 complete · next: pick H2 / DX / opportunistic H1 · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
+_Status: Phase 0 ✅ · Phase 1 (H1) ✅ Tasks 1.1–1.6 (PRs #12–#20 merged) — H1 complete · Opportunistic H1 ✅ (Growth #22, Note #23, Pumping #24) · next: pick H2 / DX · Created 2026-07-03 · Companion to [ROADMAP.md](../../../ROADMAP.md)_
 
 > **You are a fresh agent.** You have none of the context that produced this plan. Read the "Orientation" section first, in order, before touching code. Every design decision here is already settled and recorded in an ADR — do not relitigate; implement.
 
@@ -142,7 +142,7 @@ _Goal: ship breastfeeding (gates audience C), turn History into Trends with the 
 ### Opportunistic in H1 (cheap, toggled) — do if convenient
 
 - **Growth** (height / head circumference): ✅ DONE (PR #22). New event type, sibling of Weight, same chart primitive. Opt-in (not in `DEFAULT_ENABLED_EVENT_TYPES`); one event carries optional `heightMm`/`headCircumferenceMm` (mm integers), cm/in toggle.
-- **Pumping**: duration + volume event. Behind the toggle.
+- **Pumping**: ✅ DONE (PR #24). Volume-only + optional side (no duration — a supply event, distinct from a breast/bottle Feed); a home quick-log type (button + sheet) reusing the bottle volume UI, opt-in via the toggle.
 - **Free-text Note**: ✅ DONE (PR #23). Deliberately minimal timestamped note (single `text` field); a home quick-log type (button + sheet), opt-in via the toggle. No chart, no Trends card.
 
 ---

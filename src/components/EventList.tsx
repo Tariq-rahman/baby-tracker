@@ -41,6 +41,8 @@ function describeEvent(e: BabyEvent, medications: Medication[] = []): string {
       return `${formatSleepDuration((Date.parse(e.endedAt) - Date.parse(e.occurredAt)) / 60000)} sleep`
     case 'note':
       return e.text
+    case 'pumping':
+      return `${e.volumeMl} ml pumped${e.side ? ` · ${e.side}` : ''}`
   }
 }
 

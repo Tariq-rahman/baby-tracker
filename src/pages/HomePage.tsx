@@ -110,6 +110,9 @@ export default function HomePage() {
       case 'note':
         text = 'Note added'
         break
+      case 'pumping':
+        text = `Pumping logged · ${event.volumeMl} ml`
+        break
     }
     flashToast({ type: event.type, text })
   }

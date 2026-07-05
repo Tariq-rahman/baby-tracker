@@ -24,6 +24,7 @@
   --sleep: #8c7ba0;
   --growth: #6c8ea3;
   --note: #b08968;
+  --pumping: #c08497;
   /* warm radial ground, echoes the design mockup */
   --app-bg: radial-gradient(1200px 800px at 50% -10%, #efe6da 0%, #e7dccd 55%, #ddd0bd 100%);
 }
@@ -44,6 +45,7 @@
   --sleep: #a090b4;
   --growth: #84a7bc;
   --note: #c39d7c;
+  --pumping: #d19dac;
   --app-bg: radial-gradient(1200px 800px at 50% -10%, #241b16 0%, #1c1512 55%, #140f0c 100%);
 }
 

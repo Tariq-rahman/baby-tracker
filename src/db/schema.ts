@@ -1,6 +1,6 @@
 import Dexie, { type Table, type Transaction } from 'dexie'
 
-export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep' | 'growth' | 'note'
+export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep' | 'growth' | 'note' | 'pumping'
 export type FeedContent = 'formula' | 'breastmilk'
 export type FeedMethod = 'bottle' | 'breast'
 export type BreastSide = 'left' | 'right' | 'both'
@@ -128,6 +128,20 @@ export interface NoteEvent extends BaseEvent {
   text: string
 }
 /**
+ * A Pumping session: the volume of milk expressed (whole millilitres), with an
+ * optional side (left/right/both). It's a *supply* event — distinct from a breast
+ * feed (nursing, ADR-0007) and from a bottle feed (milk consumed): a pumped bottle
+ * later fed is still a separate Feed event. Volume-only by design (no duration —
+ * output is the datum that matters); it's a home quick-log type like feed/nappy/note,
+ * not a per-measurement type like weight/growth. Opt-in per household (ADR-0004):
+ * not in DEFAULT_ENABLED_EVENT_TYPES.
+ */
+export interface PumpingEvent extends BaseEvent {
+  type: 'pumping'
+  volumeMl: number
+  side?: BreastSide
+}
+/**
  * A Sleep spans an interval, unlike every other (instant) event. `occurredAt` is
  * the start; `endedAt` is the end, or `null` while the sleep is still running.
  * A running sleep is a real synced row (not local-only), so both caregivers see
@@ -146,6 +160,7 @@ export type BabyEvent =
   | SleepEvent
   | GrowthEvent
   | NoteEvent
+  | PumpingEvent
 
 /** Outbox: a record awaiting push. Compound key `[table+uid]` dedupes re-queues. */
 export interface PendingRef {
