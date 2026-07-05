@@ -42,7 +42,13 @@ Two concrete pains motivated this:
 
 ## DX.1 — Local visual-check loop ✅ DONE
 
-_Shipped: `AppShell` export, `index.dev.html`/`main.dev.tsx` dev entry, `src/dev/fixture.ts` + `seedDevData()`, and `npm run shots` (Playwright, light+dark, 5 screens → gitignored `screenshots/`). Verified: all screens render seeded, insights fire, prod `dist/` carries no dev-entry code. One-time setup: `npx playwright install chromium`._
+_Shipped: `AppShell` export, `index.dev.html`/`main.dev.tsx` dev entry, `src/dev/fixture.ts` + `seedDevData()`, and `npm run shots` (Playwright, light+dark, 5 screens → gitignored `screenshots/`). Verified: all screens render seeded, insights fire, prod `dist/` carries no dev-entry code._
+
+**Running the harness (operational notes):**
+- One-time: `npx playwright install chromium`.
+- `npm run shots` (and any Playwright run) needs the **sandbox disabled** — Chromium won't launch inside Claude's command sandbox (Mach-port `EPERM`). `npm install` likewise needs it off (npm cache lives outside the writable allowlist).
+- `main.dev.tsx` navigates client-side via `history.pushState` + a manually-dispatched `popstate` (React Router listens for it), so non-nav routes like `/weight` screenshot fine.
+- `seedDevData()` clears the store each load and re-anchors the fixture to `new Date()`, so every run is fresh — PNGs are for eyeballing, not pixel-diffing (decision 4).
 
 ### Task DX.1.1 — Extract the app shell ✅
 

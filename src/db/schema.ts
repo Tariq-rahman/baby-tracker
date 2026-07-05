@@ -1,6 +1,6 @@
 import Dexie, { type Table, type Transaction } from 'dexie'
 
-export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep'
+export type EventType = 'feed' | 'nappy' | 'weight' | 'dose' | 'sleep' | 'growth'
 export type FeedContent = 'formula' | 'breastmilk'
 export type FeedMethod = 'bottle' | 'breast'
 export type BreastSide = 'left' | 'right' | 'both'
@@ -99,6 +99,19 @@ export interface WeightEvent extends BaseEvent {
   type: 'weight'
   grams: number
 }
+/**
+ * A Growth measurement: height and/or head circumference, each stored as whole
+ * millimetres (integer, like weight's grams — CONTEXT.md). Both are optional so a
+ * single visit can record either or both; the log form enforces "at least one".
+ * Opt-in per household (ADR-0004): not in DEFAULT_ENABLED_EVENT_TYPES. Like weight,
+ * it's a per-measurement (not per-day) type logged from its own page, not the home
+ * quick-log grid.
+ */
+export interface GrowthEvent extends BaseEvent {
+  type: 'growth'
+  heightMm?: number
+  headCircumferenceMm?: number
+}
 export interface DoseEvent extends BaseEvent {
   type: 'dose'
   medicationId: number
@@ -115,7 +128,7 @@ export interface SleepEvent extends BaseEvent {
   type: 'sleep'
   endedAt: string | null // ISO datetime; null ⇒ in progress
 }
-export type BabyEvent = FeedEvent | NappyEvent | WeightEvent | DoseEvent | SleepEvent
+export type BabyEvent = FeedEvent | NappyEvent | WeightEvent | DoseEvent | SleepEvent | GrowthEvent
 
 /** Outbox: a record awaiting push. Compound key `[table+uid]` dedupes re-queues. */
 export interface PendingRef {

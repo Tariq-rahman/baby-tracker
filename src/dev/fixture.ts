@@ -1,3 +1,4 @@
+import { DEFAULT_ENABLED_EVENT_TYPES } from '../db/schema'
 import type { BabyEvent, BreastSide, FeedContent, NappyType, NappySize } from '../db/schema'
 import type { BabyInput, MedicationInput } from '../db/storage'
 
@@ -53,7 +54,9 @@ export function buildFixture(now: Date): DevFixture {
     baby: {
       name: 'Robin',
       dateOfBirth: isoDate(dayAt(now, AGE_DAYS, 0)),
-      // Leave settings undefined ⇒ the default enabled event set applies.
+      // Enable the defaults plus the opt-in Growth type, so the demo shell shows the
+      // Growth trends card + page (growth is off by default per ADR-0004).
+      settings: { enabledEventTypes: [...DEFAULT_ENABLED_EVENT_TYPES, 'growth'] },
     },
     medications: [{ name: 'Vitamin D', defaultDose: 1, unit: 'drops' }],
     buildEvents(now, medicationIds) {
@@ -122,6 +125,14 @@ export function buildFixture(now: Date): DevFixture {
           const at = dayAt(now, d, 10, 0)
           const grams = 4200 + (HISTORY_DAYS - d) * 30
           add({ type: 'weight', grams, occurredAt: iso(at), createdAt: iso(at) })
+        }
+
+        // Growth: every ~4 days, height + head circumference climbing (mm, per CONTEXT).
+        if (d % 4 === 0) {
+          const at = dayAt(now, d, 10, 30)
+          const heightMm = 560 + (HISTORY_DAYS - d) * 3
+          const headCircumferenceMm = 380 + Math.round((HISTORY_DAYS - d) * 1.5)
+          add({ type: 'growth', heightMm, headCircumferenceMm, occurredAt: iso(at), createdAt: iso(at) })
         }
       }
 

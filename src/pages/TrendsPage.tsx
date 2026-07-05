@@ -10,9 +10,9 @@ import { useBaby, useEnabledEventTypes } from '../hooks/useBaby'
 import { getLastEventOfType } from '../lib/stats'
 import { listDailyTrend, listWindowDays, seriesMean, TREND_WINDOWS } from '../lib/trends'
 import { listFeedStrategies, runStrategies } from '../lib/insights'
-import { gramsToKg } from '../lib/units'
+import { gramsToKg, mmToCm } from '../lib/units'
 import { eventColor, palette } from '../lib/theme'
-import type { EventType, WeightEvent } from '../db/schema'
+import type { EventType, WeightEvent, GrowthEvent } from '../db/schema'
 import TrendCard, { type TrendSeries } from '../components/TrendCard'
 import InsightList from '../components/InsightList'
 import { ChevronRight } from '../components/icons'
@@ -121,6 +121,8 @@ export default function TrendsPage() {
         )}
 
         {shows('weight') && <WeightCard />}
+
+        {shows('growth') && <GrowthCard />}
       </div>
     </div>
   )
@@ -152,6 +154,55 @@ function WeightCard() {
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
               <Line type="monotone" dataKey="kg" stroke={col} strokeWidth={2.5} dot={false} />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      ) : (
+        <p className="py-6 text-center text-sm text-inkSoft">Add measurements to see a trend.</p>
+      )}
+    </Link>
+  )
+}
+
+/** Growth is per-measurement, not per-day — a preview that links to the full page. */
+function GrowthCard() {
+  const events = useEvents()
+  const col = eventColor.growth
+  const headCol = palette.ring
+  const measurements = events
+    .filter((e): e is GrowthEvent => e.type === 'growth')
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))
+  const latest = getLastEventOfType(events, 'growth')
+  const data = measurements.map((e) => ({
+    height: e.heightMm != null ? Number(mmToCm(e.heightMm).toFixed(1)) : null,
+    head: e.headCircumferenceMm != null ? Number(mmToCm(e.headCircumferenceMm).toFixed(1)) : null,
+  }))
+  const summary = latest
+    ? [
+        latest.heightMm != null ? `${mmToCm(latest.heightMm).toFixed(1)} cm` : null,
+        latest.headCircumferenceMm != null ? `head ${mmToCm(latest.headCircumferenceMm).toFixed(1)} cm` : null,
+      ]
+        .filter(Boolean)
+        .join(' · ')
+    : 'No data'
+
+  return (
+    <Link to="/growth" className="press block rounded-3xl bg-surface p-4 shadow-md">
+      <div className="mb-2 flex items-baseline justify-between">
+        <h2 className="text-base font-bold" style={{ color: col }}>
+          Growth
+        </h2>
+        <span className="flex items-center gap-0.5 text-xs font-semibold text-inkSoft">
+          {summary}
+          <ChevronRight size={14} color={palette.inkSoft} />
+        </span>
+      </div>
+      {data.length >= 2 ? (
+        <div className="h-24 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 4, right: 4, bottom: 0, left: 4 }}>
+              <Line type="monotone" dataKey="height" stroke={col} strokeWidth={2.5} dot={false} connectNulls />
+              <Line type="monotone" dataKey="head" stroke={headCol} strokeWidth={2.5} dot={false} connectNulls />
             </LineChart>
           </ResponsiveContainer>
         </div>

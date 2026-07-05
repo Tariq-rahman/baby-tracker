@@ -267,6 +267,33 @@ describe('eventToRow (payload packing)', () => {
       },
       wantPayload: { endedAt: T_ISO },
     },
+    {
+      name: 'growth packs both metrics',
+      event: {
+        type: 'growth',
+        uid: 'e8',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        heightMm: 525,
+        headCircumferenceMm: 380,
+      },
+      wantPayload: { heightMm: 525, headCircumferenceMm: 380 },
+    },
+    {
+      name: 'growth with only height packs the other metric as null',
+      event: {
+        type: 'growth',
+        uid: 'e9',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        heightMm: 525,
+      },
+      wantPayload: { heightMm: 525, headCircumferenceMm: null },
+    },
   ]
 
   for (const c of cases) {
@@ -376,6 +403,27 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       updatedAt: T,
       deletedAt: null,
       endedAt: T_ISO,
+    },
+    {
+      type: 'growth',
+      uid: 'e8',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      heightMm: 525,
+      headCircumferenceMm: 380,
+    },
+    {
+      type: 'growth',
+      uid: 'e9',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      heightMm: 525,
     },
   ]
 

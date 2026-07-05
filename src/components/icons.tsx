@@ -77,6 +77,19 @@ export function ScaleIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconP
   )
 }
 
+export function RulerIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
+  // upright ruler with tick marks — height / growth measurement
+  return svg(
+    size,
+    color,
+    sw,
+    <>
+      <rect x="8" y="2.5" width="8" height="19" rx="1.5" />
+      <path d="M8 6.5h3M8 10.5h2M8 14.5h3M8 18.5h2" />
+    </>,
+  )
+}
+
 export function MoonIcon({ size = 24, color = 'currentColor', sw = 1.8 }: IconProps) {
   // crescent moon for sleep
   return svg(size, color, sw, <path d="M20 13.5A8 8 0 1 1 10.5 4a6.5 6.5 0 0 0 9.5 9.5Z" />)
@@ -144,6 +157,7 @@ export function EventIcon({
   if (type === 'feed') return <BottleIcon size={size} color={color} sw={sw} />
   if (type === 'nappy') return <NappyIcon size={size} color={color} sw={sw} />
   if (type === 'weight') return <ScaleIcon size={size} color={color} sw={sw} />
+  if (type === 'growth') return <RulerIcon size={size} color={color} sw={sw} />
   if (type === 'sleep') return <MoonIcon size={size} color={color} sw={sw} />
   return <PillIcon size={size} color={color} sw={sw} />
 }

@@ -18,13 +18,14 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const OUT_DIR = resolve(ROOT, 'screenshots')
 const DEV_ENTRY = '/index.dev.html'
 
-// The screens to capture. `path` drives React Router; `weight` is reachable only
-// via the Trends card in-app, so we push its route directly.
+// The screens to capture. `path` drives React Router; `weight` and `growth` are
+// reachable only via the Trends card in-app, so we push their routes directly.
 const ROUTES = [
   { name: 'home', path: '/' },
   { name: 'history', path: '/history' },
   { name: 'trends', path: '/trends' },
   { name: 'weight', path: '/weight' },
+  { name: 'growth', path: '/growth' },
   { name: 'settings', path: '/settings' },
 ]
 const THEMES = ['light', 'dark']
