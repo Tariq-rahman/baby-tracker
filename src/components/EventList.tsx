@@ -16,6 +16,11 @@ interface Props {
 function describeEvent(e: BabyEvent, medications: Medication[] = []): string {
   switch (e.type) {
     case 'feed':
+      if (e.method === 'breast') {
+        if (e.endedAt == null) return `nursing · ${e.side}`
+        const mins = (Date.parse(e.endedAt) - Date.parse(e.occurredAt)) / 60000
+        return `${formatSleepDuration(mins)} · ${e.side}`
+      }
       return `${e.volumeMl} ml bottle${e.content ? ` · ${e.content}` : ''}`
     case 'nappy':
       return `${e.nappyType} nappy${e.size ? ` · ${e.size}` : ''}`

@@ -5,17 +5,20 @@ import {
   listEventsForDay,
   getLastEventOfType,
   getRunningSleep,
+  getRunningBreastFeed,
+  isFlaggedSleep,
+  isFlaggedBreastFeed,
   sleepMinutesForDay,
   formatSleepDuration,
 } from '../lib/stats'
-import { stopSleep } from '../db/storage'
+import { stopSleep, stopBreastFeed } from '../db/storage'
 import { fmtClock, relativeTime } from '../lib/format'
 import type { BabyEvent } from '../db/schema'
 import type { LogKind } from '../components/LogButtons'
 import Header from '../components/Header'
 import Clock from '../components/Clock'
 import LogButtons from '../components/LogButtons'
-import RunningSleepBanner from '../components/RunningSleepBanner'
+import RunningBanner from '../components/RunningBanner'
 import EventList from '../components/EventList'
 import Toast, { type ToastData } from '../components/Toast'
 import EventSheet from '../components/sheets/EventSheet'
@@ -44,6 +47,7 @@ export default function HomePage() {
   for (const e of todays) if (e.type in counts) counts[e.type as keyof typeof counts] += 1
 
   const runningSleep = getRunningSleep(events)
+  const runningBreastFeed = getRunningBreastFeed(events)
   const sleepToday = formatSleepDuration(sleepMinutesForDay(events, today, now))
 
   const lastFeed = getLastEventOfType(events, 'feed')
@@ -54,7 +58,11 @@ export default function HomePage() {
     let text: string
     switch (event.type) {
       case 'feed':
-        text = `Feed logged · ${event.volumeMl} ml`
+        if (event.method === 'breast') {
+          text = event.endedAt == null ? 'Feed started' : 'Feed logged'
+        } else {
+          text = `Feed logged · ${event.volumeMl} ml`
+        }
         break
       case 'nappy':
         text = `${event.nappyType} nappy logged`
@@ -78,6 +86,10 @@ export default function HomePage() {
     if (runningSleep?.id) await stopSleep(runningSleep.id, new Date().toISOString())
   }
 
+  async function handleStopBreastFeed() {
+    if (runningBreastFeed?.id) await stopBreastFeed(runningBreastFeed.id, new Date().toISOString())
+  }
+
   return (
     <div>
       <Header
@@ -94,10 +106,23 @@ export default function HomePage() {
 
       <div className="flex flex-col gap-6 px-5 pb-6 pt-1.5">
         {runningSleep && (
-          <RunningSleepBanner
-            sleep={runningSleep}
+          <RunningBanner
+            type="sleep"
+            title="Sleep in progress"
+            startMs={Date.parse(runningSleep.occurredAt)}
+            flagged={isFlaggedSleep(runningSleep, now)}
             onOpen={() => setEditing(runningSleep)}
             onStop={handleStopSleep}
+          />
+        )}
+        {runningBreastFeed && (
+          <RunningBanner
+            type="feed"
+            title="Feed in progress"
+            startMs={Date.parse(runningBreastFeed.occurredAt)}
+            flagged={isFlaggedBreastFeed(runningBreastFeed, now)}
+            onOpen={() => setEditing(runningBreastFeed)}
+            onStop={handleStopBreastFeed}
           />
         )}
         <Clock events={events} now={now} centerTime={center.time} centerAmpm={center.ampm} />
@@ -124,6 +149,7 @@ export default function HomePage() {
         medications={medications}
         lastFeed={lastFeed}
         hasRunningSleep={runningSleep != null}
+        hasRunningBreastFeed={runningBreastFeed != null}
         onSaved={showToast}
         onClose={() => {
           setAdding(null)

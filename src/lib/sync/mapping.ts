@@ -19,6 +19,7 @@ import type {
   BabyEvent,
   EventType,
   FeedContent,
+  BreastSide,
   NappyType,
   NappySize,
 } from '../../db/schema'
@@ -147,7 +148,10 @@ export interface EventFromRowCtx {
 function packPayload(e: BabyEvent, ctx: EventToRowCtx): Record<string, unknown> {
   switch (e.type) {
     case 'feed':
-      return { volumeMl: e.volumeMl, content: e.content ?? null }
+      if (e.method === 'breast') {
+        return { method: 'breast', side: e.side, endedAt: e.endedAt }
+      }
+      return { method: 'bottle', volumeMl: e.volumeMl, content: e.content ?? null }
     case 'nappy':
       return { nappyType: e.nappyType, size: e.size ?? null }
     case 'weight':
@@ -195,9 +199,20 @@ export function eventFromRow(r: EventRow, ctx: EventFromRowCtx): WithoutId<BabyE
   const p = r.payload as Record<string, unknown>
   switch (r.type as EventType) {
     case 'feed':
+      if (p.method === 'breast') {
+        return {
+          ...base,
+          type: 'feed',
+          method: 'breast',
+          side: p.side as BreastSide,
+          endedAt: (p.endedAt as string | null) ?? null,
+        }
+      }
+      // Absent method (pre-ADR-0007 rows) ⇒ bottle.
       return {
         ...base,
         type: 'feed',
+        method: 'bottle',
         volumeMl: Number(p.volumeMl),
         ...(p.content != null ? { content: p.content as FeedContent } : {}),
       }

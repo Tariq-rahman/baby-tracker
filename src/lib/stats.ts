@@ -1,7 +1,15 @@
-import type { BabyEvent, EventType, SleepEvent } from '../db/schema'
+import type { BabyEvent, BreastFeedEvent, EventType, SleepEvent } from '../db/schema'
 
 /** A running sleep past this elapsed is assumed forgotten: flagged, excluded from totals. */
 export const SLEEP_FLAG_MS = 18 * 60 * 60 * 1000
+
+/** A running breast feed past this elapsed is assumed forgotten (nursing rarely runs hours). */
+export const BREAST_FLAG_MS = 3 * 60 * 60 * 1000
+
+/** Narrow a Feed to a breast feed (a duration event). Absent method ⇒ bottle. */
+export function isBreastFeed(e: BabyEvent): e is BreastFeedEvent {
+  return e.type === 'feed' && e.method === 'breast'
+}
 
 export function getLastEventOfType<T extends EventType>(
   events: BabyEvent[],
@@ -47,6 +55,38 @@ export function getRunningSleep(events: BabyEvent[]): SleepEvent | undefined {
 /** A running sleep whose elapsed exceeds the cap — flagged and excluded from totals. */
 export function isFlaggedSleep(sleep: SleepEvent, now: Date): boolean {
   return sleep.endedAt == null && now.getTime() - Date.parse(sleep.occurredAt) > SLEEP_FLAG_MS
+}
+
+/** The single running breast feed (earliest-started, if a sync race left more than one). */
+export function getRunningBreastFeed(events: BabyEvent[]): BreastFeedEvent | undefined {
+  return events
+    .filter(isBreastFeed)
+    .filter((e) => e.endedAt == null)
+    .sort((a, b) => a.occurredAt.localeCompare(b.occurredAt))[0]
+}
+
+/** A running breast feed whose elapsed exceeds the cap — flagged and excluded from totals. */
+export function isFlaggedBreastFeed(feed: BreastFeedEvent, now: Date): boolean {
+  return feed.endedAt == null && now.getTime() - Date.parse(feed.occurredAt) > BREAST_FLAG_MS
+}
+
+/**
+ * Total nursing minutes attributable to a day, clipping each breast feed's interval
+ * to [dayStart, dayEnd) (mirrors sleepMinutesForDay). A running feed counts up to
+ * `now`, unless flagged (>3h). Bottle feeds have no duration and are ignored.
+ */
+export function nursingMinutesForDay(events: BabyEvent[], day: string, now: Date): number {
+  const [start, end] = dayBounds(day)
+  let mins = 0
+  for (const e of events) {
+    if (!isBreastFeed(e)) continue
+    if (isFlaggedBreastFeed(e, now)) continue
+    const s = Date.parse(e.occurredAt)
+    const t = e.endedAt != null ? Date.parse(e.endedAt) : now.getTime()
+    const overlap = Math.min(t, end) - Math.max(s, start)
+    if (overlap > 0) mins += overlap / 60000
+  }
+  return Math.round(mins)
 }
 
 /**
@@ -107,8 +147,10 @@ export function getDailyTotals(events: BabyEvent[], day: string): DailyTotals {
   }
   for (const e of dayEvents) {
     if (e.type === 'feed') {
+      // A feed counts regardless of method, but only a bottle has volume — never
+      // read a breast feed's absent volumeMl (it would be NaN). See ADR-0007.
       totals.feedCount += 1
-      totals.feedVolumeMl += e.volumeMl
+      if (e.method !== 'breast') totals.feedVolumeMl += e.volumeMl
     } else if (e.type === 'nappy') {
       if (e.nappyType === 'wet') totals.nappyWet += 1
       if (e.nappyType === 'dirty' || e.nappyType === 'both') totals.nappyDirty += 1

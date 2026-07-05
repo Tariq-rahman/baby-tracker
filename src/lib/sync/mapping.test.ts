@@ -141,7 +141,7 @@ describe('eventToRow (payload packing)', () => {
         volumeMl: 120,
         content: 'formula',
       },
-      wantPayload: { volumeMl: 120, content: 'formula' },
+      wantPayload: { method: 'bottle', volumeMl: 120, content: 'formula' },
     },
     {
       name: 'feed without content packs null',
@@ -154,7 +154,37 @@ describe('eventToRow (payload packing)', () => {
         deletedAt: null,
         volumeMl: 120,
       },
-      wantPayload: { volumeMl: 120, content: null },
+      wantPayload: { method: 'bottle', volumeMl: 120, content: null },
+    },
+    {
+      name: 'breast feed in progress packs side + endedAt null',
+      event: {
+        type: 'feed',
+        method: 'breast',
+        uid: 'bf1',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        side: 'left',
+        endedAt: null,
+      },
+      wantPayload: { method: 'breast', side: 'left', endedAt: null },
+    },
+    {
+      name: 'finished breast feed packs its end',
+      event: {
+        type: 'feed',
+        method: 'breast',
+        uid: 'bf2',
+        occurredAt: T_ISO,
+        createdAt: T_ISO,
+        updatedAt: T,
+        deletedAt: null,
+        side: 'both',
+        endedAt: T_ISO,
+      },
+      wantPayload: { method: 'breast', side: 'both', endedAt: T_ISO },
     },
     {
       name: 'nappy with size',
@@ -261,6 +291,7 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
   const events: BabyEvent[] = [
     {
       type: 'feed',
+      method: 'bottle',
       uid: 'e1',
       householdId: HH,
       occurredAt: T_ISO,
@@ -269,6 +300,30 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
       deletedAt: null,
       volumeMl: 120,
       content: 'breastmilk',
+    },
+    {
+      type: 'feed',
+      method: 'breast',
+      uid: 'e1b',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      side: 'right',
+      endedAt: null,
+    },
+    {
+      type: 'feed',
+      method: 'breast',
+      uid: 'e1c',
+      householdId: HH,
+      occurredAt: T_ISO,
+      createdAt: T_ISO,
+      updatedAt: T,
+      deletedAt: null,
+      side: 'both',
+      endedAt: T_ISO,
     },
     {
       type: 'nappy',
@@ -332,8 +387,25 @@ describe('eventFromRow (payload unpacking + round-trip)', () => {
   }
 
   it('maps a dose with an unresolvable medication uid to medicationId 0', () => {
-    const row = eventToRow(events[3], toCtx)
+    const dose = events.find((e) => e.type === 'dose')!
+    const row = eventToRow(dose, toCtx)
     const back = eventFromRow(row, { medLocalIdByUid: new Map() })
     expect(back).toMatchObject({ type: 'dose', medicationId: 0, doseAmount: 2.5 })
+  })
+
+  it('defaults a pre-ADR-0007 feed row (no method in payload) to a bottle', () => {
+    const legacyRow = {
+      id: 'legacy',
+      baby_id: 'baby-uid',
+      household_id: HH,
+      type: 'feed',
+      occurred_at: T_ISO,
+      payload: { volumeMl: 90 }, // no method — a bottle logged before breastfeeding shipped
+      created_at: T_ISO,
+      updated_at: T_ISO,
+      deleted_at: null,
+    }
+    const back = eventFromRow(legacyRow, fromCtx)
+    expect(back).toMatchObject({ type: 'feed', method: 'bottle', volumeMl: 90 })
   })
 })

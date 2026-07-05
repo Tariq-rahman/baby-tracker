@@ -1,6 +1,6 @@
 import type { BabyEvent, FeedEvent, Medication } from '../../db/schema'
 import { addEvent, updateEvent, deleteEvent } from '../../db/storage'
-import BottleSheet from './BottleSheet'
+import FeedSheet from './FeedSheet'
 import NappySheet from './NappySheet'
 import DoseSheet from './DoseSheet'
 import WeightSheet from './WeightSheet'
@@ -14,6 +14,8 @@ interface Props {
   lastFeed?: FeedEvent
   /** True when a sleep is already open — hides "Start sleep now" in the sleep sheet. */
   hasRunningSleep?: boolean
+  /** True when a breast feed is already open — hides "Start feed now" in the feed sheet. */
+  hasRunningBreastFeed?: boolean
   onClose: () => void
   onSaved?: (event: BabyEvent) => void
 }
@@ -24,6 +26,7 @@ export default function EventSheet({
   medications,
   lastFeed,
   hasRunningSleep,
+  hasRunningBreastFeed,
   onClose,
   onSaved,
 }: Props) {
@@ -56,9 +59,10 @@ export default function EventSheet({
         onClick={(e) => e.stopPropagation()}
       >
         {(kind === 'feed' || kind === 'bottle') && (
-          <BottleSheet
+          <FeedSheet
             initial={editing?.type === 'feed' ? editing : undefined}
             lastFeed={editing ? undefined : lastFeed}
+            hasRunningBreastFeed={hasRunningBreastFeed}
             onSave={handleSave}
             onDelete={editing ? handleDelete : undefined}
             onClose={onClose}
